@@ -1,0 +1,1068 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mise en Place</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<style>
+
+
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --sage:#431f51;--sage-light:#f0eaf4;--sage-dark:#2d1438;
+  --cream:#FFFFFF;--white:#FFFFFF;--ink:#323031;--ink-2:#605e4d;--ink-3:#A8A59C;
+  --border:#E4E2DC;--border-2:#C8C5BB;
+  --terra:#431f51;--terra-light:#f0eaf4;
+  --sky:#605e4d;--sky-light:#F0EFE8;
+  --gold:#605e4d;--gold-light:#F0EFE8;
+  --accent:#431f51;--accent-light:#f0eaf4;
+}
+body{font-family:'DM Sans',system-ui,-apple-system,sans-serif;background:var(--cream);color:var(--ink);font-size:14px;line-height:1.5;min-height:100vh}
+.app-nav{background:var(--white);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 20px;height:52px;position:sticky;top:0;z-index:50}
+.app-logo{font-family:'Cormorant Garamond',Georgia,serif;font-size:20px;font-weight:600;color:#431f51;margin-right:28px;letter-spacing:0.02em}
+.nav-tab{font-size:13px;font-weight:500;color:var(--ink-2);padding:0 14px;border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;height:52px;transition:color .15s,border-color .15s}
+.nav-tab:hover{color:var(--ink)}
+.nav-tab.active{color:#431f51;border-bottom-color:#431f51}
+.tab{display:none}.tab.active{display:block}
+
+/* PLANNER */
+.planner{display:grid;grid-template-columns:360px 1fr;height:calc(100vh - 52px);overflow:hidden}
+.sidebar{background:var(--white);border-right:1px solid var(--border);display:flex;flex-direction:column}
+.sidebar-head{padding:14px 14px 10px;border-bottom:1px solid var(--border)}
+.sidebar-title{font-size:14px;font-weight:600;color:var(--ink);margin-bottom:2px}
+.sidebar-sub{font-size:11px;color:var(--ink-2);text-transform:uppercase;letter-spacing:.05em}
+.cal-days{flex:1;overflow-y:auto;padding:8px}
+.day-slot{border:1.5px dashed var(--border);border-radius:8px;padding:10px 12px;margin-bottom:8px;min-height:72px;transition:border-color .15s,background .15s}
+.day-slot.over{border-color:var(--sage);background:var(--sage-light)}
+.day-lbl{font-size:12px;font-weight:600;color:var(--ink-2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
+.meal-chip{background:var(--sage-light);color:#431f51;font-size:13px;font-weight:500;padding:5px 9px;border-radius:4px;display:flex;align-items:center;gap:4px;margin-bottom:4px}
+.meal-chip-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chip-rm{background:none;border:none;color:var(--sage);cursor:pointer;font-size:16px;line-height:1;padding:0;opacity:.6}
+.chip-rm:hover{opacity:1}
+.sidebar-foot{padding:10px 12px;border-top:1px solid var(--border)}
+.btn-reset{width:100%;padding:7px;background:none;border:1px solid var(--border-2);border-radius:6px;font-size:12px;color:var(--ink-2);cursor:pointer;transition:all .15s;font-family:inherit}
+.btn-reset:hover{border-color:var(--terra);color:var(--terra);background:var(--terra-light)}
+.browser{display:flex;flex-direction:column;overflow:hidden}
+.toolbar{background:var(--white);border-bottom:1px solid var(--border);padding:10px 18px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.search-inp{font-size:13px;padding:6px 11px;border:1px solid var(--border);border-radius:6px;background:var(--cream);color:var(--ink);width:190px;outline:none;font-family:inherit}
+.search-inp:focus{border-color:var(--sage)}
+.filter-sel{font-size:13px;padding:6px 10px;border:1px solid var(--border);border-radius:6px;background:var(--cream);color:var(--ink);outline:none;cursor:pointer;font-family:inherit}
+.btn-primary{padding:6px 13px;background:var(--sage);color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:500;cursor:pointer;font-family:inherit}
+.btn-primary:hover{background:var(--sage-dark)}
+.btn-sky{padding:6px 13px;background:var(--sky);color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:500;cursor:pointer;margin-left:auto;font-family:inherit}
+.grid-wrap{flex:1;overflow-y:auto;padding:18px}
+.cat-section{margin-bottom:26px}
+.cat-title{font-size:11px;font-weight:600;color:var(--ink-2);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;padding-bottom:5px;border-bottom:1px solid var(--border)}
+.recipe-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
+.rcard{background:var(--white);border:1px solid var(--border);border-radius:8px;padding:11px;cursor:grab;transition:border-color .15s;user-select:none;position:relative}
+.rcard:hover{border-color:var(--border-2)}
+.rcard:active{cursor:grabbing}
+.rcard-name{font-size:14px;font-weight:500;color:var(--ink);line-height:1.3;padding-right:40px}
+.rcard-acts{position:absolute;top:8px;right:7px;display:flex;gap:3px}
+.icon-btn{background:none;border:none;cursor:pointer;color:var(--ink-3);font-size:14px;padding:2px;border-radius:3px;line-height:1}
+.icon-btn:hover{color:var(--sage)}
+.rcard-cat{font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.04em;padding:2px 6px;border-radius:3px;display:inline-block}
+.cc{background:#f0eaf4;color:#431f51}.cb{background:#EDECEA;color:#323031}
+.cs{background:#EDECEA;color:#323031}.cso{background:#f0eaf4;color:#431f51}
+.cd{background:#f0eaf4;color:#431f51}.cbr{background:#F0EFE8;color:#605e4d}
+.cv{background:#F0EFE8;color:#605e4d}.csa{background:#EDECEA;color:#323031}
+.csi{background:#f0eaf4;color:#431f51}
+
+/* SHOPPING */
+.shop-wrap{max-width:580px;margin:0 auto;padding:20px 16px}
+.shop-head{display:flex;align-items:center;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.shop-title{font-family:'Cormorant Garamond',Georgia,serif;font-size:24px;font-weight:600;color:var(--ink);flex:1}
+.btn-sm{font-size:12px;color:var(--ink-2);background:none;border:1px solid var(--border);border-radius:6px;padding:5px 11px;cursor:pointer;font-family:inherit}
+.btn-sm:hover{border-color:var(--border-2);color:var(--ink)}
+.aisle-sec{margin-bottom:16px}
+.aisle-hd{display:flex;align-items:center;gap:6px;padding:7px 0;border-bottom:1px solid var(--border);margin-bottom:6px;cursor:pointer}
+.aisle-nm{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-2);flex:1}
+.aisle-cnt{font-size:11px;color:var(--ink-3)}
+.aisle-chev{color:var(--ink-3);font-size:11px;transition:transform .15s;display:inline-block}
+.aisle-chev.open{transform:rotate(90deg)}
+.shop-item{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border)}
+.shop-item.done{opacity:.4}
+.shop-item.done .item-name{text-decoration:line-through}
+.chk{width:22px;height:22px;border:1.5px solid var(--border-2);border-radius:50%;flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;background:white;font-size:13px;color:transparent}
+.chk.on{background:var(--sage);border-color:var(--sage);color:white}
+.item-name{flex:1;font-size:15px}
+.item-qty{font-size:12px;color:var(--ink-2)}
+.aisle-edit-btn{font-size:11px;color:var(--ink-3);background:none;border:none;cursor:pointer;padding:2px 4px;border-radius:3px;font-family:inherit}
+.aisle-edit-btn:hover{color:var(--sage)}
+.add-row{display:flex;gap:8px;margin-top:16px;padding-top:16px;border-top:1px solid var(--border)}
+.add-inp{flex:1;font-size:14px;padding:9px 12px;border:1px solid var(--border);border-radius:6px;background:var(--white);color:var(--ink);outline:none;font-family:inherit}
+.add-inp:focus{border-color:var(--sage)}
+.btn-add{padding:9px 15px;background:var(--sage);color:#fff;border:none;border-radius:6px;font-size:14px;cursor:pointer;font-family:inherit}
+.empty{text-align:center;padding:48px 20px;color:var(--ink-2);font-size:14px}
+
+/* COOKING */
+.cook-wrap{max-width:680px;margin:0 auto;padding:20px 16px}
+.cook-title{font-family:'Cormorant Garamond',Georgia,serif;font-size:24px;font-weight:600;color:var(--ink);margin-bottom:18px}
+.cook-day{margin-bottom:10px}
+.cook-day-hd{display:flex;align-items:center;gap:8px;padding:11px 14px;background:var(--white);border:1px solid var(--border);border-radius:8px;cursor:pointer;user-select:none}
+.cook-day-hd:hover{border-color:var(--border-2)}
+.cook-day-hd.open{border-radius:8px 8px 0 0;border-bottom-color:transparent}
+.cook-day-nm{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-2);flex:1}
+.cook-day-cnt{font-size:12px;color:var(--ink-3)}
+.cook-chev{color:var(--ink-3);font-size:11px;display:inline-block;transition:transform .2s}
+.cook-chev.open{transform:rotate(90deg)}
+.cook-body{display:none;background:var(--white);border:1px solid var(--border);border-top:none;border-radius:0 0 8px 8px;padding:0 16px 14px}
+.cook-body.open{display:block}
+.cook-recipe{margin-top:14px;padding-top:14px;border-top:1px solid var(--border)}
+.cook-recipe:first-child{border-top:none;margin-top:6px;padding-top:6px}
+.cook-recipe-nm{font-size:15px;font-weight:600;color:var(--ink);margin-bottom:10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.cook-url{font-size:12px;color:var(--sky);text-decoration:none}
+.cook-url:hover{text-decoration:underline}
+.step-list{list-style:none}
+.step-item{display:flex;gap:10px;margin-bottom:9px}
+.step-n{width:21px;height:21px;border-radius:50%;background:var(--sage-light);color:#431f51;font-size:11px;font-weight:600;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px}
+.step-txt{font-size:14px;color:var(--ink);line-height:1.6}
+
+/* MODALS */
+.overlay{position:fixed;inset:0;background:rgba(44,42,37,.55);z-index:200;display:flex;align-items:center;justify-content:center;padding:20px}
+.overlay.hide{display:none}
+.modal{background:var(--white);border-radius:12px;width:100%;max-width:540px;max-height:88vh;overflow-y:auto;padding:26px;position:relative}
+.modal-title{font-family:'Cormorant Garamond',Georgia,serif;font-size:22px;font-weight:600;color:var(--ink);margin-bottom:18px}
+.m-close{position:absolute;top:14px;right:14px;background:none;border:none;font-size:18px;color:var(--ink-3);cursor:pointer;padding:4px;border-radius:4px;line-height:1}
+.m-close:hover{color:var(--ink)}
+.fg{margin-bottom:14px}
+.fl{display:block;font-size:11px;font-weight:600;color:var(--ink-2);text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px}
+.fi,.fs,.fta{width:100%;font-family:inherit;font-size:14px;padding:8px 11px;border:1px solid var(--border);border-radius:6px;background:var(--cream);color:var(--ink);outline:none}
+.fi:focus,.fs:focus,.fta:focus{border-color:var(--sage)}
+.fta{resize:vertical;min-height:80px}
+.frow{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.m-acts{display:flex;justify-content:flex-end;gap:8px;margin-top:22px;align-items:center}
+.btn-cancel{padding:8px 16px;background:none;border:1px solid var(--border-2);border-radius:6px;font-size:13px;color:var(--ink-2);cursor:pointer;font-family:inherit}
+.btn-cancel:hover{color:var(--ink)}
+.btn-save{padding:8px 18px;background:var(--sage);color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:500;cursor:pointer;font-family:inherit}
+.btn-save:hover{background:var(--sage-dark)}
+.btn-danger{padding:8px 16px;background:none;border:1px solid var(--terra);border-radius:6px;font-size:13px;color:var(--terra);cursor:pointer;font-family:inherit;margin-right:auto}
+.view-ings{list-style:disc;padding-left:18px;margin-bottom:14px}
+.view-ings li{font-size:14px;margin-bottom:3px}
+.sec-lbl{font-size:11px;font-weight:600;color:var(--ink-2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:7px;margin-top:2px}
+.parse-status{font-size:13px;color:var(--ink-2);margin-top:7px;min-height:18px}
+.parse-status.loading{color:var(--sage)}
+.parse-status.err{color:var(--terra)}
+.cat-over{background:var(--sage-light)!important}
+
+/* COOKING MODE */
+.cook-mode-overlay{position:fixed;inset:0;background:#323031;z-index:999;display:flex;align-items:center;justify-content:center;padding:24px}
+.cook-mode-overlay.hide{display:none}
+.cook-mode-inner{width:100%;max-width:680px;display:flex;flex-direction:column;align-items:center;gap:20px}
+.cook-mode-header{width:100%;display:flex;align-items:center;justify-content:space-between}
+.cook-mode-recipe-name{font-size:14px;font-weight:500;color:rgba(255,255,255,.5);letter-spacing:.05em;text-transform:uppercase}
+.cook-mode-close{background:none;border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.6);font-size:13px;cursor:pointer;padding:6px 14px;border-radius:6px;font-family:inherit}
+.cook-mode-close:hover{color:#fff;border-color:rgba(255,255,255,.5)}
+.cook-mode-card{background:rgba(255,255,255,.07);border-radius:16px;padding:36px 40px;width:100%;min-height:180px;display:flex;flex-direction:column;justify-content:center}
+.cook-mode-step-label{font-size:11px;color:rgba(255,255,255,.4);margin-bottom:14px;letter-spacing:.1em;text-transform:uppercase}
+.cook-mode-step-text{font-size:22px;color:#fff;line-height:1.6;font-weight:300}
+.cook-mode-timer{background:rgba(255,255,255,.08);border-radius:12px;padding:16px 24px;display:flex;align-items:center;gap:16px;width:100%}
+.cook-mode-timer.hide{display:none}
+.cook-mode-timer-time{font-size:38px;font-weight:200;color:#fff;font-variant-numeric:tabular-nums;flex:1}
+.cook-mode-timer-time.running{color:#93C5FD}
+.cook-mode-timer-time.done{color:#6EE7B7}
+.cook-mode-timer-btn{padding:8px 18px;background:rgba(255,255,255,.12);color:#fff;border:none;border-radius:8px;font-size:14px;cursor:pointer;font-family:inherit}
+.cook-mode-timer-btn:hover{background:rgba(255,255,255,.22)}
+.cook-mode-dots{display:flex;gap:6px}
+.cm-dot{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.2)}
+.cm-dot.active{background:#fff}
+.cm-dot.done{background:rgba(255,255,255,.45)}
+.cook-mode-nav{display:flex;gap:14px}
+.cook-mode-nav-btn{padding:12px 28px;background:rgba(255,255,255,.1);color:#fff;border:none;border-radius:10px;font-size:15px;cursor:pointer;font-family:inherit}
+.cook-mode-nav-btn:hover{background:rgba(255,255,255,.18)}
+.cook-mode-nav-btn:disabled{opacity:.3;cursor:default}
+.cook-mode-nav-btn.next{background:var(--sage);padding:12px 36px}
+.cook-mode-nav-btn.next:hover{background:var(--sage-dark)}
+.cat-over{background:var(--sage-light)!important}
+
+</style>
+</head>
+<body>
+<nav class="app-nav">
+  <span class="app-logo">Mise en Place</span>
+  <button class="nav-tab active" onclick="switchTab('planning',this)">Meal Planning</button>
+  <button class="nav-tab" onclick="switchTab('shopping',this)">Shopping</button>
+  <button class="nav-tab" onclick="switchTab('cooking',this)">Cooking</button>
+  <span id="save-status" style="margin-left:auto;font-size:12px;color:var(--ink-3);padding-right:8px"></span>
+</nav>
+<div id="error-banner" style="display:none;background:#fdecea;color:#c0392b;padding:10px 20px;font-size:13px;border-bottom:1px solid #f5c6cb;"></div>
+
+<div id="tab-planning" class="tab active">
+  <div class="planner">
+    <aside class="sidebar">
+      <div class="sidebar-head">
+        <div class="sidebar-title">This Week</div>
+      </div>
+      <div class="cal-days" id="cal-days"></div>
+      <div class="sidebar-foot">
+        <button class="btn-reset" onclick="resetPlan()">Reset meal plan</button>
+      </div>
+    </aside>
+    <div class="browser">
+      <div class="toolbar">
+        <input class="search-inp" id="srch" placeholder="Search recipes..." oninput="renderGrid()">
+        <select class="filter-sel" id="fcat" onchange="renderGrid()">
+          <option value="">All categories</option>
+        </select>
+        <button class="btn-primary" onclick="openEdit(null)">+ Add recipe</button>
+        <button class="btn-primary" style="background:var(--ink-2)" onclick="openCatModal()">+ Category</button>
+      </div>
+      <div class="grid-wrap" id="grid"></div>
+    </div>
+  </div>
+</div>
+
+<div id="tab-shopping" class="tab">
+  <div class="shop-wrap">
+    <div class="shop-head">
+      <span class="shop-title">Shopping List</span>
+      <button class="btn-sm" onclick="openAisleModal()">Manage aisles</button>
+      <button class="btn-sm" onclick="clearChecked()">Clear checked</button>
+    </div>
+    <div id="shop-list"></div>
+    <div class="add-row">
+      <input class="add-inp" id="add-inp" placeholder="Add item (e.g. 2 cups oat milk)..." onkeydown="if(event.key==='Enter')addManual()">
+      <button class="btn-add" onclick="addManual()">Add</button>
+    </div>
+  </div>
+</div>
+
+<div id="tab-cooking" class="tab">
+  <div class="cook-wrap">
+    <div class="cook-title">This Week's Cooking</div>
+    <div id="cook-list"></div>
+  </div>
+</div>
+
+<!-- View modal -->
+<div class="overlay hide" id="ov-view">
+  <div class="modal">
+    <button class="m-close" onclick="closeOv('ov-view')">&#10005;</button>
+    <div class="modal-title" id="v-title"></div>
+    <div id="v-url-wrap" style="margin-bottom:12px;display:none"><a id="v-url" href="#" target="_blank" style="font-size:13px;color:var(--sky)">View original recipe &#8599;</a></div>
+    <div class="sec-lbl">Ingredients</div>
+    <ul class="view-ings" id="v-ings"></ul>
+    <div class="sec-lbl" style="margin-top:14px">Instructions</div>
+    <ol class="step-list" id="v-steps"></ol>
+    <div class="m-acts">
+      <button class="btn-cancel" onclick="closeOv('ov-view');openEdit(curViewId)">Edit recipe</button>
+      <button class="btn-save" onclick="closeOv('ov-view')">Done</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit modal -->
+<div class="overlay hide" id="ov-edit">
+  <div class="modal">
+    <button class="m-close" onclick="closeOv('ov-edit')">&#10005;</button>
+    <div class="modal-title" id="edit-title">Add Recipe</div>
+    <div class="frow">
+      <div class="fg"><label class="fl">Recipe name</label><input class="fi" id="e-name" placeholder="Recipe name"></div>
+      <div class="fg"><label class="fl">Category</label><select class="fs" id="e-cat"></select></div>
+    </div>
+    <div class="fg"><label class="fl">Source URL (optional)</label><input class="fi" id="e-url" type="url" placeholder="https://..."></div>
+    <div class="fg"><label class="fl">Ingredients (one per line)</label><textarea class="fta" id="e-ings" placeholder="2 lbs chicken thighs&#10;3 cloves garlic"></textarea></div>
+    <div class="fg"><label class="fl">Instructions (one step per line)</label><textarea class="fta" id="e-steps" placeholder="Step 1...&#10;Step 2..."></textarea></div>
+    <div class="m-acts">
+      <button class="btn-danger" id="btn-del" style="display:none" onclick="delRecipe()">Delete recipe</button>
+      <button class="btn-cancel" onclick="closeOv('ov-edit')">Cancel</button>
+      <button class="btn-save" onclick="saveRecipe()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Aisle modal -->
+<div class="overlay hide" id="ov-aisle">
+  <div class="modal">
+    <button class="m-close" onclick="closeOv('ov-aisle');renderShopping()">&#10005;</button>
+    <div class="modal-title">Manage Aisles</div>
+    <p style="font-size:13px;color:var(--ink-2);margin-bottom:14px">Reassign ingredients to match your store's layout.</p>
+    <div id="aisle-list" style="max-height:340px;overflow-y:auto"></div>
+    <div class="m-acts"><button class="btn-save" onclick="closeOv('ov-aisle');renderShopping()">Done</button></div>
+  </div>
+</div>
+
+<!-- Category modal -->
+<div class="overlay hide" id="ov-cat">
+  <div class="modal">
+    <button class="m-close" onclick="closeOv('ov-cat')">&#10005;</button>
+    <div class="modal-title">Manage Categories</div>
+    <p style="font-size:13px;color:var(--ink-2);margin-bottom:14px">Drag rows to reorder. Custom categories can be removed if no recipes are assigned.</p>
+    <div id="cat-list" style="max-height:300px;overflow-y:auto;margin-bottom:16px"></div>
+    <div style="display:flex;gap:8px">
+      <input class="fi" id="new-cat-inp" placeholder="New category name..." onkeydown="if(event.key==='Enter')addCategory()">
+      <button class="btn-save" onclick="addCategory()">Add</button>
+    </div>
+    <div class="m-acts"><button class="btn-save" onclick="closeOv('ov-cat');renderAll()">Done</button></div>
+  </div>
+</div>
+
+<!-- Cooking Mode Overlay -->
+<div class="cook-mode-overlay hide" id="cook-mode">
+  <div class="cook-mode-inner">
+    <div class="cook-mode-header">
+      <span class="cook-mode-recipe-name" id="cm-recipe-name"></span>
+      <button class="cook-mode-close" onclick="closeCookMode()">&#10005; Exit</button>
+    </div>
+    <div class="cook-mode-card">
+      <div class="cook-mode-step-label" id="cm-step-label"></div>
+      <div class="cook-mode-step-text" id="cm-step-text"></div>
+    </div>
+    <div class="cook-mode-timer hide" id="cm-timer">
+      <div class="cook-mode-timer-time" id="cm-timer-display">0:00</div>
+      <button class="cook-mode-timer-btn" id="cm-start-btn" onclick="toggleTimer()">Start</button>
+      <button class="cook-mode-timer-btn" onclick="resetTimer()">Reset</button>
+    </div>
+    <div class="cook-mode-dots" id="cm-dots"></div>
+    <div class="cook-mode-nav">
+      <button class="cook-mode-nav-btn" id="cm-prev-btn" onclick="cmNav(-1)">&#8592; Prev</button>
+      <button class="cook-mode-nav-btn next" id="cm-next-btn">Next &#8594;</button>
+    </div>
+  </div>
+</div>
+<script>
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCZSyRH9kP3svekubx-g9WH3pVq8GDQStU",
+  authDomain: "meal-planner-4d56b.firebaseapp.com",
+  projectId: "meal-planner-4d56b",
+  storageBucket: "meal-planner-4d56b.firebasestorage.app",
+  messagingSenderId: "984012558252",
+  appId: "1:984012558252:web:e5e942fa399c88a8963409"
+};
+
+const fbApp = firebase.initializeApp(firebaseConfig);
+const db = fbApp.firestore();
+
+// ── CONSTANTS ────────────────────────────────────────────────
+const DAYS = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+const BASE_CATS = ['Chicken','Beef','Pork','Seafood','Breakfast','Soup','Salads','Sides','Vegetarian','Desserts','Bowls','No-Brainer / Freezer'];
+const AISLES = ['Produce','Meat & Seafood','Dairy','Pantry','Canned Goods','Deli & Sausage','Spices & Seasonings','Frozen','Bakery','Other'];
+const AISLE_MAP = {
+  'salmon':'Meat & Seafood','shrimp':'Meat & Seafood','chicken':'Meat & Seafood','ground beef':'Meat & Seafood',
+  'tilapia':'Meat & Seafood','crab':'Meat & Seafood','steak':'Meat & Seafood','beef chuck':'Meat & Seafood',
+  'tenderloin':'Meat & Seafood','turkey':'Meat & Seafood','drumstick':'Meat & Seafood',
+  'italian sausage':'Deli & Sausage','kielbasa':'Deli & Sausage','sausage':'Deli & Sausage',
+  'andouille':'Deli & Sausage','ham':'Deli & Sausage','hot dog':'Deli & Sausage','bacon':'Deli & Sausage',
+  'prosciutto':'Deli & Sausage','pulled pork':'Deli & Sausage',
+  'butter':'Dairy','cream cheese':'Dairy','cheddar':'Dairy','parmesan':'Dairy','cotija':'Dairy',
+  'havarti':'Dairy','mozzarella':'Dairy','swiss':'Dairy','feta':'Dairy','greek yogurt':'Dairy',
+  'heavy cream':'Dairy','half and half':'Dairy','milk':'Dairy','mexican cheese':'Dairy','sour cream':'Dairy','egg':'Dairy',
+  'olive oil':'Pantry','pasta':'Pantry','noodle':'Pantry','ketchup':'Pantry','capers':'Pantry',
+  'white wine':'Pantry','orzo':'Pantry','flour':'Pantry','brown sugar':'Pantry','cocoa':'Pantry',
+  'oil':'Pantry','vanilla':'Pantry','chocolate chips':'Pantry','dijon':'Pantry','mayo':'Pantry',
+  'mayonnaise':'Pantry','soy sauce':'Pantry','tamari':'Pantry','honey':'Pantry','rice vinegar':'Pantry',
+  'sesame oil':'Pantry','hoisin':'Pantry','tamarind':'Pantry','fish sauce':'Pantry','coconut aminos':'Pantry',
+  'pesto':'Pantry','pine nuts':'Pantry','cornstarch':'Pantry','arrowroot':'Pantry','bread crumb':'Pantry',
+  'panko':'Pantry','almond flour':'Pantry','tapioca':'Pantry','rice':'Pantry','worcestershire':'Pantry',
+  'sriracha':'Pantry','gochujang':'Pantry','chili crisp':'Pantry','maple syrup':'Pantry',
+  'coconut sugar':'Pantry','cashew':'Pantry','peanut':'Pantry',
+  'pita':'Bakery','tortillas':'Bakery','bread':'Bakery','bun':'Bakery','baguette':'Bakery','roll':'Bakery',
+  'diced tomatoes':'Canned Goods','enchilada sauce':'Canned Goods','salsa verde':'Canned Goods',
+  'tomato sauce':'Canned Goods','tomato paste':'Canned Goods','crushed tomatoes':'Canned Goods',
+  'chicken broth':'Canned Goods','beef broth':'Canned Goods','chicken stock':'Canned Goods',
+  'beef stock':'Canned Goods','vegetable broth':'Canned Goods','cannellini':'Canned Goods',
+  'black beans':'Canned Goods','pinto beans':'Canned Goods','kidney beans':'Canned Goods',
+  'chickpea':'Canned Goods','ranch beans':'Canned Goods','pork and beans':'Canned Goods',
+  'coconut milk':'Canned Goods','rotel':'Canned Goods',
+  'garlic':'Produce','lemon':'Produce','lime':'Produce','onion':'Produce','potatoes':'Produce',
+  'corn':'Produce','bell pepper':'Produce','zucchini':'Produce','kale':'Produce','spinach':'Produce',
+  'mushrooms':'Produce','parsley':'Produce','chives':'Produce','tomato':'Produce','cucumber':'Produce',
+  'avocado':'Produce','broccoli':'Produce','carrot':'Produce','celery':'Produce','asparagus':'Produce',
+  'leek':'Produce','shallot':'Produce','ginger':'Produce','arugula':'Produce','cabbage':'Produce',
+  'green bean':'Produce','sweet potato':'Produce',
+  'hummus':'Deli & Sausage','olives':'Deli & Sausage','kimchi':'Deli & Sausage','pepperoncini':'Deli & Sausage',
+  'cajun':'Spices & Seasonings','fajita':'Spices & Seasonings','paprika':'Spices & Seasonings',
+  'chili powder':'Spices & Seasonings','garlic powder':'Spices & Seasonings','cumin':'Spices & Seasonings',
+  'turmeric':'Spices & Seasonings','coriander':'Spices & Seasonings','thyme':'Spices & Seasonings',
+  'cinnamon':'Spices & Seasonings','cloves':'Spices & Seasonings','sumac':'Spices & Seasonings',
+  'smoked paprika':'Spices & Seasonings','salt':'Spices & Seasonings','pepper':'Spices & Seasonings',
+  'italian seasoning':'Spices & Seasonings','fennel seed':'Spices & Seasonings','creole':'Spices & Seasonings',
+  'taco seasoning':'Spices & Seasonings','garam masala':'Spices & Seasonings','poppy seed':'Spices & Seasonings',
+  'edamame':'Frozen','waffle fries':'Frozen','tater tot':'Frozen','meatball':'Frozen',
+  'dumpling':'Frozen','orange chicken':'Frozen','fried rice':'Frozen','fish stick':'Frozen',
+};
+
+// ── STATE ────────────────────────────────────────────────────
+let R = [], plan = {}, checked = {}, manuals = [], aisleOv = {};
+let customCats = [], catOrder = [];
+let editId = null, curViewId = null, dragId = null, calDragSrc = null;
+let saveTimer = null;
+
+function uid() { return Math.random().toString(36).slice(2, 10); }
+
+function allCats() {
+  const all = [...BASE_CATS, ...customCats];
+  if (!catOrder.length) return all;
+  const ordered = catOrder.filter(c => all.includes(c));
+  const rest = all.filter(c => !catOrder.includes(c));
+  return [...ordered, ...rest];
+}
+
+function getAisle(ing) {
+  const k = ing.toLowerCase().replace(/[^a-z\s]/g, '').trim();
+  if (aisleOv[k]) return aisleOv[k];
+  for (const [m, a] of Object.entries(AISLE_MAP)) { if (k.includes(m)) return a; }
+  return 'Other';
+}
+
+// ── STATUS ───────────────────────────────────────────────────
+function showStatus(msg, isError = false) {
+  const el = document.getElementById('save-status');
+  if (!el) return;
+  el.textContent = msg;
+  el.style.color = isError ? 'var(--terra)' : 'var(--ink-3)';
+  if (msg) setTimeout(() => { if (el.textContent === msg) el.textContent = ''; }, 3000);
+}
+
+function showError(msg) {
+  const el = document.getElementById('error-banner');
+  if (!el) return;
+  el.textContent = msg;
+  el.style.display = 'block';
+  console.error('App error:', msg);
+}
+
+// ── FIREBASE ─────────────────────────────────────────────────
+async function loadData() {
+  showStatus('Loading...');
+  try {
+    const recipesSnap = await db.collection('recipes').get();
+    if (!recipesSnap.empty) {
+      R = recipesSnap.docs.map(d => ({id: d.id, ...d.data()}));
+    } else {
+      await seedRecipes();
+    }
+    const settingsSnap = await db.collection('settings').doc('main').get();
+    if (settingsSnap.exists) {
+      const s = settingsSnap.data();
+      plan = s.plan || {};
+      checked = s.checked || {};
+      manuals = s.manuals || [];
+      aisleOv = s.aisleOv || {};
+      customCats = s.customCats || [];
+      catOrder = s.catOrder || [];
+    }
+    showStatus('');
+  } catch(e) {
+    console.error('Load error:', e);
+    showError(`Firebase error: ${e.code || e.message}. Check Firestore rules and connection.`);
+  }
+  renderAll();
+}
+
+async function seedRecipes() {
+  showStatus('Setting up your recipes...');
+  const defaults = getDefaultRecipes();
+  const batch = db.batch();
+  defaults.forEach(r => {
+    const ref = db.collection('recipes').doc();
+    r.id = ref.id;
+    batch.set(ref, r);
+  });
+  await batch.commit();
+  R = defaults;
+  showStatus('');
+}
+
+function saveSettings() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(async () => {
+    try {
+      await db.collection('settings').doc('main').set({plan, checked, manuals, aisleOv, customCats, catOrder});
+    } catch(e) {
+      console.error('Save error:', e);
+      showStatus('Save failed', true);
+    }
+  }, 800);
+}
+
+async function saveRecipeToDb(recipe) {
+  try {
+    if (recipe.id) {
+      await db.collection('recipes').doc(recipe.id).set(recipe);
+    } else {
+      const ref = await db.collection('recipes').add(recipe);
+      recipe.id = ref.id;
+    }
+  } catch(e) {
+    console.error('Recipe save error:', e);
+    showStatus('Save failed', true);
+  }
+}
+
+async function deleteRecipeFromDb(id) {
+  try { await db.collection('recipes').doc(id).delete(); }
+  catch(e) { console.error('Delete error:', e); }
+}
+
+// ── DEFAULT RECIPES ──────────────────────────────────────────
+function getDefaultRecipes() {
+  const u = () => Math.random().toString(36).slice(2,10);
+  return [
+{id:u(),name:'Baked Salmon with Lemon Sauce',category:'Seafood',url:'',
+     ingredients:['2–2.5 lbs salmon fillet','2 tbsp olive oil','Salt and pepper','4 tbsp butter','2 frozen garlic cubes','Juice of 2 lemons','1 tsp Dijon mustard','2 tbsp fresh parsley, chopped'],
+     instructions:['Pat salmon dry. Brush with olive oil and season with salt and pepper. Place on a lined baking sheet.','Bake at 400°F for 12–15 minutes until it flakes easily.','While salmon bakes, melt butter over medium heat. Add garlic cubes and cook 1 minute. Whisk in lemon juice, Dijon, and parsley. Simmer 2 minutes.','Drizzle lemon sauce over baked salmon.']},
+    {id:u(),name:'Garlic Butter Shrimp Boil',category:'Seafood',url:'https://pinchofyum.com/garlic-butter-shrimp-boil',
+     ingredients:['1 lb small potatoes, halved','2–4 ears corn, cut into pieces','1 lb kielbasa sausage, sliced','1 lb shrimp','Garlic','Lemon','Cajun seasoning','Salt','2 sticks salted butter','5–6 cloves garlic, sliced','Thyme'],
+     instructions:['Bring large pot of water to boil. Add garlic, lemon, salt, and seasonings.','Melt butter over medium-low heat. Add garlic, thyme, and lemon.','Add potatoes and corn to boiling water. Cook 5–8 minutes until tender-crisp.','Add kielbasa and shrimp. Boil 4–5 more minutes until shrimp is cooked through.','Drain and transfer to a roasting pan. Toss with lemon butter and Cajun seasoning.']},
+    {id:u(),name:'Street Corn Enchilada Bake',category:'Chicken',url:'https://www.halfbakedharvest.com/chicken-enchilada-bake/',
+     ingredients:['2 tbsp olive oil','1½ lb chicken breasts or thighs, sliced','2 tbsp fajita seasoning','1 yellow onion, sliced','2 bell peppers, sliced','Salt and pepper','2½ cups enchilada sauce or salsa verde','2 cups fresh corn','4 oz cream cheese, room temp','¼ cup plain Greek yogurt','1 tsp chili powder','2 tbsp fresh chives, chopped','1½ cups shredded Mexican cheese blend','6 tortillas, warmed','¼ cup mayo','Avocado and cotija cheese for serving'],
+     instructions:['Preheat oven to 400°F.','In an oven-safe skillet, sear chicken with oil, fajita seasoning, salt and pepper over high heat. Add onion and peppers, cook 5 minutes. Stir in enchilada sauce.','In a bowl, combine corn, cream cheese, yogurt, chili powder, chives, salt, and half the cheese.','Spoon corn mixture down center of each tortilla, roll up. Place seam-side down over chicken. Top with remaining cheese. Bake 15–20 minutes.','Serve topped with avocado and cotija cheese.']},
+    {id:u(),name:'Hamburger Helper',category:'Beef',url:'',
+     ingredients:['2 tbsp olive oil','1 lb lean ground beef','1 medium yellow onion, chopped','1 zucchini, grated','1 lb penne or rotini pasta','2 cups low-sodium beef broth','1½ cups milk','1 tbsp ketchup','1½–2 cups shredded cheddar cheese','Fresh parsley for serving','Salt and pepper','1 tsp chili powder','1 tsp paprika','1 tsp garlic powder'],
+     instructions:['In a large pot, cook olive oil, onion, and beef over medium-high heat until browned, about 10 minutes.','Stir in chili powder, paprika, and garlic powder. Cook 1 minute.','Add pasta, zucchini, broth, milk, and ketchup. Stir to combine.','Bring to a gentle boil. Simmer 5–8 minutes, stirring often, until pasta is al dente.','Stir in cheese and cook 2–3 more minutes until creamy. Top with parsley.']},
+    {id:u(),name:'Chicken Shawarma + Mediterranean Salad',category:'Chicken',url:'',
+     ingredients:['8 boneless skinless chicken thighs','1 large onion, thinly sliced','Juice of 1 large lemon','⅓ cup olive oil','Salt to taste','6 pita pockets','Hummus, spinach, olives/pickles for serving','¾ tbsp each: cumin, turmeric, coriander, garlic powder, paprika','½ tsp each: ground cloves, cinnamon','6 Roma tomatoes, diced','1 large English cucumber, diced','½ cup fresh parsley, chopped','2 tbsp olive oil + 2 tsp lemon juice + 1 tsp sumac for dressing'],
+     instructions:['Mix shawarma spices. Pat chicken dry, slice, toss with spices, onion, lemon juice, and olive oil. Marinate at least 3 hours or overnight.','Preheat oven to 425°F. Let chicken come to room temperature.','Spread chicken and onions on an oiled sheet pan. Roast 30 minutes. Broil briefly for crispiness.','Make salad: combine tomatoes, cucumber, and parsley. Dress with olive oil, lemon juice, sumac, salt, and pepper.','Serve in pitas with hummus, chicken, spinach, salad, and pickles or olives.']},
+    {id:u(),name:'Sausage, Kale & Bean Soup',category:'Soup',url:'https://pinchofyum.com/sausage-kale-and-white-bean-soup',
+     ingredients:['1 tbsp olive oil','½ yellow onion, thinly sliced','3–4 large cloves garlic, sliced','1 lb ground Italian sausage','½–1 tsp smoked paprika','1–2 tbsp flour','5 cups chicken broth','15-oz can cannellini beans','4 medium potatoes, diced','2 stalks kale, ribs removed, chopped','¾ cup heavy cream or half and half','½ tsp salt','Freshly ground black pepper','Lemon juice to taste'],
+     instructions:['Heat olive oil over medium-high. Sauté onion and garlic 10 minutes until soft. Add sausage, cook until browned. Drain excess grease.','Add smoked paprika and flour; sauté 1 minute.','Add broth, then potatoes. Simmer 10–15 minutes until potatoes are tender.','Add kale and white beans. Simmer 5–10 more minutes.','Stir in heavy cream, salt, pepper, and lemon juice to taste.']},
+    {id:u(),name:'Instant Pot Chicken Cacciatore',category:'Chicken',url:'https://pinchofyum.com/instant-pot-chicken-cacciatore',
+     ingredients:['2 tbsp olive oil','Flour and salt for dredging','1–1.5 lbs chicken breasts or thighs','1 onion, diced','3 cloves garlic, minced','16 oz mushrooms, sliced','1 bell pepper, diced','½ cup dry white wine or chicken broth','28-oz can diced tomatoes','2 tsp salt','4 oz capers, rinsed','4 tbsp butter','Parsley, lemon, and Parmesan for serving','Capellini or angel hair pasta for serving'],
+     instructions:['Dredge chicken in flour and salt. On sauté mode, add oil and sear chicken a few minutes each side. Remove and set aside.','Add onion, mushrooms, and garlic. Sauté until softened. Add wine and let it cook off.','Add chicken and remaining ingredients. Cook on high pressure 15 minutes. Release pressure.','Shred chicken. Stir in capers, butter, parsley, and lemon.','Serve with angel hair pasta, topped with parsley and Parmesan.']},
+    {id:u(),name:'Mug Brownie',category:'Desserts',url:'',
+     ingredients:['3 tbsp all-purpose flour','3 tbsp brown sugar','3 tbsp cocoa powder','3 tbsp flavorless oil (canola, coconut, or sunflower)','3 tbsp water','¼ tsp salt','½ tsp vanilla extract','2 tsp chocolate chips'],
+     instructions:['Mix all ingredients together in a mug.','Microwave 45–60 seconds.','Allow to cool 5 minutes.','Serve with vanilla ice cream.']}
+,
+
+  {id:u(),name:'Tomato Soup',category:'Soup',url:'',ingredients:['1 can (29 oz) tomato sauce','1 cup heavy whipping cream','1½ tsp brown sugar','1 tsp Italian seasoning','¼ tsp salt','⅛ tsp white pepper','Dash of hot pepper sauce'],instructions:['Combine all ingredients in a large saucepan.','Cook and stir over medium heat until heated through — do not boil.','Garnish with croutons, cheese, tomatoes, or onions.']},
+  {id:u(),name:'Tortellini Soup',category:'Soup',url:'https://pinchofyum.com/tortellini-soup',ingredients:['1 lb ground mild Italian sausage','1 small yellow onion, diced','2 celery stalks, diced','2 large carrots, peeled and diced','3 garlic cloves, minced','1 tsp kosher salt','½ tsp ground black pepper','½ tsp Italian seasoning','1 tsp fennel seed, crushed','1 can (6 oz) tomato paste','½ cup dry white wine','½ cup all-purpose flour','6–7 cups chicken broth','14 oz refrigerated cheese tortellini','2 cups half and half or heavy cream','1 handful chopped fresh spinach','Parmesan and fresh parsley for serving'],instructions:['In a large stockpot over medium-high, cook sausage breaking into pieces. When mostly browned, add onion, celery, and carrot. Sauté 5 minutes until soft.','Add garlic, spices, and tomato paste. Sauté 3–5 minutes, stirring occasionally.','Add wine and let cook out a few minutes. Stir in flour and cook 1 minute. Gradually add chicken broth, stir to combine. Simmer 15 minutes over low heat.','Add cream, bring to a low simmer. Add tortellini and spinach. Cook until tortellini is al dente per package directions. Serve with parsley and Parmesan.']},
+  {id:u(),name:'Crowd Pleaser Mexican Soup',category:'Soup',url:'',ingredients:['2 lbs lean ground beef or ground chicken','1 large onion, chopped','2 frozen garlic cubes','1 tsp garlic salt','1 tsp cumin','1 package dry ranch dressing mix','2–3 tbsp taco seasoning','1 can (10 oz) Rotel or 1 can petite crushed tomatoes + 1 can (4 oz) green chilies','1 can (14.5 oz) crushed tomatoes','3 cups frozen roasted corn, thawed','1 can (15 oz) black beans, do not drain','1 can (15 oz) pinto beans, do not drain','1 can (15 oz) ranch beans, do not drain','2 cups water','Shredded cheese, sour cream, and tortilla chips for serving'],instructions:['Brown ground beef and onion over medium-high heat. Add garlic cubes, garlic salt, and cumin while browning.','Add all remaining ingredients into a large pot. Do not drain the beans.','Stir to combine. Bring to a boil, then reduce and simmer at least 2 hours.','Serve topped with shredded cheese and sour cream, with tortilla chips on the side.']},
+  {id:u(),name:'Chicken Stew',category:'Soup',url:'https://simplehomeedit.com/recipe/homemade-chicken-stew/',ingredients:['3 tbsp olive oil','2.5 lbs boneless skinless chicken thighs, diced','¾ tsp sea salt','¼ tsp black pepper','⅓ cup water','1 large yellow onion, diced','2 tbsp freshly grated garlic','3 stalks celery, diced','3 carrots, sliced into rounds','¾ cup dry white wine','3 tbsp unsalted butter','⅓ cup all-purpose flour','8 cups chicken stock','3 tsp Italian seasoning','3 medium potatoes, cut into 1-inch pieces','1½ tbsp Worcestershire sauce','⅓ cup heavy cream','¾ cup freshly grated Parmesan','3 tbsp finely chopped flat-leaf parsley','Crusty buttered bread to serve'],instructions:['Heat olive oil over medium-high. Season chicken with salt and pepper. Cook 3–4 minutes until browned all over. Remove and set aside.','Add water to pan and scrape up browned bits. Add onion, garlic, celery, and carrot. Cook 3–4 minutes until slightly softened.','Add white wine and cook 1–2 minutes until mostly evaporated. Add butter and melt. Add flour, stir 1 minute until a paste forms.','Return chicken to pan. Add stock, Italian seasoning, potatoes, and Worcestershire. Bring to a boil, then simmer uncovered 15–18 minutes until vegetables are tender.','Turn off heat. Stir in cream, Parmesan, and parsley. Serve with crusty buttered bread.']},
+  {id:u(),name:'Hamburger Soup',category:'Soup',url:'',ingredients:['1 lb lean ground beef','1 onion, diced','2 frozen garlic cubes','2 medium potatoes, peeled and diced','3½ cups beef broth','1 can (28 oz) crushed tomatoes','1 can (10.75 oz) condensed tomato soup','2 tsp Worcestershire sauce','1 tsp Italian seasoning','1 bay leaf','Salt and black pepper to taste','3 cups frozen mixed vegetables'],instructions:['Brown onion, ground beef, and garlic until no pink remains. Drain any fat.','Add potatoes, broth, crushed tomatoes, tomato soup, Worcestershire, seasoning, and bay leaf. Simmer covered 10 minutes.','Stir in vegetables. Simmer 15–20 minutes until potatoes are tender. Remove bay leaf before serving.']},
+  {id:u(),name:'Beef Stew (Instant Pot)',category:'Soup',url:'',ingredients:['3–4 lbs beef chuck roast, fat trimmed, cut into 1–2 inch chunks','2 medium onions, thinly sliced','4 stalks celery, sliced diagonally','12 carrots, sliced diagonally','1 can tomato sauce','4 tsp salt','2 tbsp honey','4 tbsp cornstarch or arrowroot powder'],instructions:['Place all ingredients except cornstarch in the Instant Pot.','Cook on high pressure for 35 minutes. Natural release 10 minutes, then quick release.','Make a cornstarch slurry and mix into stew.','Optional: transfer to oven-safe dish and bake uncovered at 350–400°F for 10–20 minutes to caramelize the top.']},
+  {id:u(),name:'Healing Chicken & Rice Soup',category:'Soup',url:'https://pinchofyum.com/healing-chicken-and-rice-soup',ingredients:['2 tbsp olive oil','3 frozen garlic cubes','1 two-inch knob fresh ginger, peeled and sliced','1 shallot, peeled and thinly sliced','1½ lbs boneless skinless chicken thighs','1½ tsp salt','1 tsp turmeric','3–4 cups fresh baby spinach','1 cup jasmine rice','6–8 cups chicken broth','Juice of 4 limes','Splash of soy sauce or fish sauce (optional)','Fresh mint, basil, or cilantro for topping','Peanuts or cashews for topping'],instructions:['Heat olive oil in a large soup pot over medium heat. Add garlic, ginger, and shallots. Sauté 3–5 minutes.','Add chicken thighs. Sprinkle with 1 tsp salt and turmeric. Cook until cooked through, flipping once. Remove and set aside.','Add spinach and ½ tsp salt to pan. Sauté 2–3 minutes until wilted. Remove and set aside.','Add rice to pan. Sauté 1–2 minutes. Add 6 cups broth and bring to a simmer.','While rice cooks, shred the chicken. When rice is soft, add chicken and spinach back. Season with lime juice, soy sauce, and fresh herbs. Add extra broth as needed.']},
+  {id:u(),name:'Greek Lemon Chicken Soup',category:'Soup',url:'http://www.lifeingraceblog.com/2014/01/greek-lemon-chicken-soup/',ingredients:['2 tbsp butter + 3 tbsp olive oil','28 oz mirepoix (chopped onion, celery, carrots)','¼ cup flour','1 cup jasmine rice','2–3 cups cooked chicken, shredded','2 boxes (32 oz each) chicken stock','½ cup fresh lemon juice','2 tbsp honey','½ tsp white pepper','2 handfuls fresh spinach','Salt and black pepper to taste','6 egg yolks, beaten to light yellow'],instructions:['Sauté the mirepoix in the butter and oil until onions are translucent.','Add flour with salt and pepper; cook 1 minute.','Add chicken stock and lemon juice, stirring to loosen flour from bottom.','Add rice, bring to boil stirring frequently. Reduce to low, cover and simmer 20 minutes until rice is tender.','Add chicken, spinach, honey, salt, and pepper.','Beat egg yolks until light. Gradually add some hot soup to yolks, stirring constantly. Return egg mixture to pot and heat through. Do not boil after adding eggs.']},
+  {id:u(),name:'Wild Rice Soup (Instant Pot)',category:'Soup',url:'https://pinchofyum.com/instant-pot-wild-rice-soup',ingredients:['5 medium carrots, chopped','5 stalks celery, chopped','½ onion, chopped','3 frozen garlic cubes','1 cup uncooked wild rice','8 oz fresh mushrooms, sliced','4 cups vegetable or chicken broth','1 tsp salt','1 tsp poultry seasoning','½ tsp dried thyme','6 tbsp butter','½ cup flour','1½ cups milk'],instructions:['Put all Instant Pot ingredients (carrots through thyme) in the Instant Pot. Cook on manual high pressure 45 minutes. Quick release.','When soup is done, melt butter in a saucepan. Whisk in flour. Cook 1–2 minutes.','Whisk in milk a little at a time until smooth and thickened. Season with salt.','Mix cream sauce into the soup. Stir well and serve.']},
+  {id:u(),name:'Instant Pot Potato Soup',category:'Soup',url:'https://www.delish.com/cooking/recipe-ideas/a25238472/instant-pot-potato-soup/',ingredients:['2 tbsp butter','1 large onion, chopped','2 frozen garlic cubes','1 tsp fresh thyme leaves','6 large russet potatoes, peeled and diced','4 cups low-sodium chicken broth','1 cup + 2 tbsp milk, divided','2 tbsp cornstarch','½ cup heavy cream','Salt and pepper','Shredded cheddar, cooked bacon, and chives for serving'],instructions:['Set Instant Pot to Sauté. Melt butter. Add onion and cook 5 minutes. Add garlic and thyme; cook 1 minute.','Add potatoes and broth. Pressure cook on High 8 minutes. Quick release.','Whisk together 2 tbsp milk and cornstarch to make a slurry.','Set to Sauté again. Pour in slurry, remaining milk, and cream. Boil 5 minutes stirring constantly.','Season with salt and pepper. Garnish with cheddar, bacon, and chives.']},
+  {id:u(),name:'Mini Meatball Minestrone',category:'Soup',url:'',ingredients:['Extra virgin olive oil','2 large handfuls chopped carrots','2 large handfuls chopped celery','1 small onion, chopped','2 bay leaves','Salt and pepper','6 cups chicken broth','2 cups water','2 cups pasta (bow tie, rings, or spirals)','1 bag washed baby spinach','1 lb ground beef','1 egg','4 frozen garlic cubes','½ cup grated Romano cheese','½ cup plain bread crumbs','Salt, pepper, and a pinch of nutmeg'],instructions:['Coat a large deep pot with olive oil over medium heat. Add carrots, celery, onion, and bay leaves. Season. Cook 5–6 minutes.','Combine ground beef, egg, garlic cubes, Romano cheese, and bread crumbs. Season with salt, pepper, and nutmeg.','Add broth and water to pot. Bring to a boil, then reduce to medium.','Pinch off marble-sized meatballs and drop directly into simmering soup.','Add pasta, stir, cover and simmer 10 minutes. Add baby spinach in batches, stirring to wilt. Remove bay leaves and serve.']},
+  {id:u(),name:'Burger Bowl',category:'Bowls',url:'https://pinchofyum.com/burger-bowls-with-house-sauce-and-ranch-fries',ingredients:['1 lb ground beef (85/15)','2 tsp burger seasoning','Shredded lettuce','Diced tomatoes','Diced burger pickles','1 bag (22 oz) frozen waffle fries','Favorite burger sauce'],instructions:['Bake the fries according to package directions.','Heat a cast iron skillet over high heat with no oil. Season one side of beef with 1 tsp seasoning. Add seasoning-side down. Leave undisturbed several minutes to develop a crust.','Sprinkle exposed side with remaining seasoning. After a few minutes, flip in large chunks. Cook until well-browned. Remove from heat.','Assemble bowls with burger crumbles, fries, toppings, and sauce.']},
+  {id:u(),name:'Taco Bowl',category:'Bowls',url:'',ingredients:['1.5 lbs lean ground beef','1 recipe homemade taco seasoning','2 cups cooked rice','1 can (15 oz) pinto beans, drained and rinsed','1 cup roasted corn','1 cup cherry tomatoes, halved','2 cups shredded romaine or iceberg lettuce','1 cup salsa','Shredded cheese, sour cream, guacamole for serving','Lime wedges'],instructions:['Cook rice per package directions.','Brown ground beef. Drain fat. Add taco seasoning and 2–3 tbsp water. Simmer 2 minutes.','Warm beans and corn. Assemble bowls with all toppings. Serve with lime wedges.']},
+  {id:u(),name:'Chicken Yum Yum Bowl',category:'Bowls',url:'',ingredients:['Stir fry noodles, Chinese egg noodles, or linguine','Edamame','Diced cucumber','Cubed cooked chicken','Sesame seeds','Yum yum sauce'],instructions:['Cook noodles per package directions.','Assemble bowls with noodles, edamame, cucumber, and chicken.','Top with sesame seeds and yum yum sauce.']},
+  {id:u(),name:'Cilantro Lime Chicken & Rice Bowl',category:'Bowls',url:'https://www.delish.com/cooking/recipe-ideas/a27547052/cilantro-lime-chicken-and-rice-bowl-recipe/',ingredients:['1½ cups basmati rice','Kosher salt','2 tbsp fresh lime juice + 1 tsp olive oil (for rice)','¼ cup mayonnaise','2 tbsp finely chopped fresh cilantro','1 tbsp minced jalapeño','1½ tsp fresh lime juice + ⅛ tsp garlic powder (for aioli)','2 tbsp olive oil','4 cups grilled chicken strips','2.5 cups frozen or fresh corn kernels','2 tsp taco seasoning','1 can (15 oz) black beans, drained and rinsed','1 avocado, sliced','1½ cups cherry tomatoes, quartered'],instructions:['Combine rice with 1¾ cup water and ½ tsp salt. Bring to a boil. Cover, reduce to medium-low and simmer 17 minutes. Fluff and stir in lime juice and olive oil.','Whisk mayo with cilantro, jalapeño, lime juice, garlic powder, and 2 tsp water. Season with salt and pepper.','Heat 1 tbsp oil over medium. Cook chicken strips until warm, about 4 minutes. Remove. Cook corn in same pan 2 minutes. Season.','Add remaining oil and taco seasoning to skillet. Toast 30 seconds. Add black beans and warm 2 minutes.','Fill bowls with rice. Top with corn, black beans, tomatoes, avocado, and chicken. Drizzle with aioli and garnish with cilantro.']},
+  {id:u(),name:'Chicken Hummus Bowl',category:'Bowls',url:'https://pinchofyum.com/grilled-chicken-with-pepperoncini-garlic-butter',ingredients:['1 tsp garlic powder','1 tsp onion powder','1 tsp paprika','1 tsp kosher salt','1 lb chicken breasts','1 tbsp olive oil','6 tbsp butter','1 clove garlic, minced','¼ cup pepperoncini brine','¼–½ cup pepperoncinis, chopped','1 pint cherry or grape tomatoes, halved','½ cucumber, chopped','¼ red onion, minced','Salt, pepper, olive oil, and vinegar for salad','Chives, feta, hummus, and pita bread for serving'],instructions:['Marinate chicken: toss chicken with spices and olive oil. Refrigerate 30 minutes to several hours.','Make cucumber salad: toss tomatoes, cucumber, and red onion with a small amount of salt, pepper, olive oil, and vinegar.','Make pepperoncini butter sauce: melt butter. Stir in garlic, brine, and pepperoncini pieces.','Grill chicken until cooked through and golden brown. Rest briefly, then slice.','Assemble: layer hummus on a platter. Add cucumber salad, chicken, and drizzle with pepperoncini butter. Add feta and chives. Serve with pita.']},
+  {id:u(),name:'Korean BBQ Beef Yum Yum Bowls',category:'Bowls',url:'https://pinchofyum.com/yum-yum-rice-bowls',ingredients:['2 lbs top sirloin steak, sliced thin','8 cloves garlic','1 three-inch piece ginger','2 bosc pears','½ cup soy sauce','½ cup brown sugar','2 tbsp sesame oil','1 cup mayonnaise','1 tbsp butter','1 tsp tomato paste','1 tsp sugar or agave','1 tsp all-purpose spice mix','Salt to taste','2 tbsp water','2 cups rice, uncooked','½ cup kimchi','6 soft-cooked eggs','2 tbsp sesame seeds','¼ cup scallions'],instructions:['Pulse garlic, ginger, and pears in a food processor until a paste. Mix with steak. Add soy sauce, brown sugar, and sesame oil to marinate. Refrigerate 30 minutes.','Cook rice according to package directions.','Whisk all yum yum sauce ingredients together. Set aside.','Heat a large heavy skillet over very high heat. Discard marinade. Sear steak in batches until golden brown. Set aside.','Assemble bowls: rice, kimchi, steak, soft-cooked egg. Top with sesame seeds, scallions, and yum yum sauce.']},
+  {id:u(),name:'Oven-Baked Kebabs',category:'Beef',url:'https://simplehomeedit.com/recipe/juicy-oven-baked-kebabs/',ingredients:['2 lb ground beef (15–20% fat)','1 small yellow onion, grated','1 tbsp freshly minced garlic','1 tbsp ground cumin','1 tbsp ground coriander','1 tbsp sweet paprika','1 tsp red pepper flakes (optional)','2 tsp sea salt','¼ tsp black pepper','3 tbsp finely chopped flat-leaf parsley','½ tsp baking soda','2 tbsp olive oil for brushing','1 small red onion, finely sliced (for sumac onions)','1½ tsp sumac','½ lemon, juiced','1 tsp olive oil','1½ cups Greek yogurt','½ tsp minced garlic','1½ tbsp fresh lemon juice','6 flatbreads or pita','2 large tomatoes, sliced'],instructions:['Preheat oven to 475°F.','Combine beef, grated onion, garlic, cumin, coriander, paprika, red pepper flakes, salt, pepper, parsley, and baking soda. Mix firmly about 2 minutes until sticky and cohesive.','Press meat onto a parchment-lined baking sheet into a rectangle about ½ inch thick. Score vertically into 1-inch strips. Press shallow horizontal slits across each strip.','Brush with olive oil. Bake on top rack 15–18 minutes until golden brown and cooked through.','Make sumac onions: combine red onion, sumac, lemon juice, olive oil, and salt. Toss and set aside 5–10 minutes.','Make yogurt garlic sauce: stir together yogurt, garlic, lemon juice, and salt.','Warm flatbreads. Press onto cooked meat to soak up juices. Serve kebabs in flatbreads with yogurt sauce, sumac onions, and tomatoes.']},
+  {id:u(),name:'Beef Sesame Noodles',category:'Beef',url:'https://www.halfbakedharvest.com/korean-beef-sesame-noodles/',ingredients:['8 oz brown rice noodles','2 tbsp sesame oil','3 cups mixed stir fry vegetables','3 shallots, sliced','1 lb flank steak, sliced thin','¼ cup toasted sesame seeds','½ cup fresh basil','4 frozen garlic cubes','1 tbsp frozen ginger cubes','½ cup tamari or soy sauce','¼ cup honey','2 tbsp rice vinegar','2–3 tbsp Gochujang','1 tbsp toasted sesame oil'],instructions:['Combine all sauce ingredients in a jar. Shake or whisk to combine.','Cook rice noodles per package directions. Drain and rinse under cold water.','Heat 1 tbsp sesame oil in a large skillet over high heat. Add vegetables and cook 2–3 minutes. Stir in 2 tbsp sauce. Remove from pan.','Add 1 tbsp sesame oil to same skillet. Add shallots and cook 2 minutes. Add beef and cook undisturbed until seared, 2 minutes. Toss meat, pour in remaining sauce. Simmer 1 minute.','Stir in noodles and vegetables. Cook 2–3 minutes. Remove from heat, stir in basil and sesame seeds. Serve immediately.']},
+  {id:u(),name:'Sloppy Joes (Whole 30)',category:'Beef',url:'https://www.jaysbakingmecrazy.com/2015/04/13/sloppy-joes-paleo-whole30/',ingredients:['½ cup chopped pitted dates','2 cans (6 oz each) tomato paste','1 can (28 oz) fire roasted diced tomatoes','2 tbsp coconut or apple cider vinegar','½ cup bone broth or water','1 tsp garlic powder','1 tsp onion powder','1 tsp salt','¼ tsp cayenne pepper','4 tbsp coconut oil','2 red peppers, diced','2 large onions, diced','2 tsp salt + 2 tsp garlic powder (for meat)','2 lbs grass-fed beef','½ cup coconut aminos','2 tbsp tomato paste (additional)'],instructions:['Add all ketchup ingredients (dates through cayenne) to a small saucepan. Cook on medium-low 20 minutes. Turn off heat. Blend until smooth.','Heat coconut oil in a large skillet. Sauté peppers and onion over medium heat about 5 minutes until softened.','Sprinkle with salt and garlic powder. Add beef and break up with a spatula. Cook until browned.','Add ketchup and coconut aminos. Stir to combine. Simmer on low at least 10 minutes, up to 40 minutes for best flavor.','Serve over oven fries or on hamburger buns.']},
+  {id:u(),name:"Parker's Tater Tot Chili",category:'Beef',url:'https://flavorfuleats.com/tater-tot-chili-casserole/',ingredients:['1 lb lean ground beef','1 yellow onion, diced','2 frozen garlic cubes','1 red bell pepper, diced','1 can (14.5 oz) crushed tomatoes','1 can (8 oz) tomato sauce','1 can (15 oz) pinto beans, drained','1 cup beef broth','2 cups shredded cheese (cheddar, Colby, or Mexican blend)','Frozen tater tots','½ tbsp cumin + 1 tbsp smoked paprika + 2 tbsp chili powder + salt and pepper'],instructions:['Preheat oven to 400°F.','Add ground beef, onion, garlic, bell pepper, and spices to a Dutch oven. Cook over medium-high heat 8–10 minutes until meat is cooked through.','Add crushed tomatoes, tomato sauce, pinto beans, and beef broth. Bring to a boil, then simmer uncovered 20 minutes.','Pour chili into a greased casserole dish. Top with shredded cheese, then arrange tater tots on top.','Bake 20–25 minutes until tater tots are golden and crispy.']},
+  {id:u(),name:'4 Packet Roast (Instant Pot)',category:'Beef',url:'',ingredients:['1 beef chuck roast (3–4 lbs)','1 packet dry ranch dressing mix','1 packet brown gravy mix','1 packet Italian salad dressing mix','1 packet onion soup mix','1 cup water','2 tbsp tapioca pearls','1 tbsp oil for searing','Assorted vegetables: carrots, cubed potatoes, onion wedges'],instructions:['Set Instant Pot to Sauté. Add oil and sear roast on all sides. Remove meat.','Deglaze bottom of pot with a splash of water, scraping up brown bits.','Insert metal trivet. Place roast on trivet. Sprinkle all four seasoning packets over roast. Add water and tapioca pearls.','Cook on high pressure for 20 minutes per pound. Natural release 15 minutes, then quick release.','Shred or slice roast. Serve with gravy from pot.']},
+  {id:u(),name:'Hearty Spaghetti',category:'Beef',url:'https://www.passionatehomemaking.com/2012/10/hearty-spaghetti-sauce.html',ingredients:['2 lbs ground beef','1 onion, chopped','1 red pepper, chopped','3 frozen garlic cubes','1–2 carrots, finely chopped','1 zucchini, finely chopped','2 celery stalks, chopped','2 tbsp oil','1 can (28 oz) crushed tomatoes','1 can (15 oz) tomato sauce','¼ cup dried parsley','1 tbsp dried basil','2 tsp dried oregano','2 tsp salt + ½ tsp pepper','1–2 tbsp honey','2–3 tbsp cornstarch or arrowroot powder','16 oz spaghetti noodles','Parmesan for serving'],instructions:['Sauté onion, pepper, carrots, celery, and zucchini in oil until soft, about 8 minutes. Purée for smoother sauce if desired.','Add meat and cook until no longer pink.','Add remaining ingredients except pasta. Stir well.','Cover and simmer at least 30 minutes, or transfer to slow cooker on low 6–8 hours.','Cook pasta per package directions. Serve sauce over noodles with Parmesan.']},
+  {id:u(),name:'Swedish Meatballs',category:'Beef',url:'',ingredients:['2 bags frozen party meatballs','12 oz wide egg noodles','5 tbsp butter','3 tbsp flour','2 cups beef broth','1 cup heavy cream','1 tbsp Worcestershire sauce','1 tsp Dijon mustard','Salt and pepper to taste'],instructions:['Cook egg noodles per package directions. Drain and set aside.','Melt butter in a large skillet over medium heat. Whisk in flour and cook 1 minute until lightly browned.','Whisk in beef broth gradually. Add cream, Worcestershire, and Dijon. Simmer and stir until thickened, 2–3 minutes.','Add frozen meatballs directly to sauce. Simmer 5–8 minutes until heated through. Season with salt and pepper.','Serve over egg noodles.']},
+  {id:u(),name:'Best Chili (Instant Pot)',category:'Beef',url:'https://ohsweetbasil.com/instant-pot-award-winning-chili-recipe/',ingredients:['1½ lbs ground beef','6 strips bacon, chopped','1 can (15 oz) kidney beans, drained','1 can (15 oz) pinto beans, drained','1 can (15 oz) black beans, drained','1 can (15 oz) fire roasted crushed tomatoes','1 can (6 oz) tomato paste','1 large red onion, chopped','1 red bell pepper, chopped','1 jalapeño, seeded and minced (optional)','2 cups beef stock','1 tbsp Worcestershire sauce','4 frozen garlic cubes','1 tbsp dried oregano','2 tsp ground cumin','2 tsp kosher salt','1 tsp black pepper','1 tsp smoked paprika','2 tbsp chili powder'],instructions:['Set Instant Pot to Sauté. Cook bacon until crisp. Remove to paper towels.','Add onions and peppers; cook until tender. Add beef and cook until browned. Drain excess grease.','Add all remaining ingredients and ¾ of the bacon. Stir to combine.','Cook on Chili setting (or Manual) 18–20 minutes. Allow pressure to release 10–15 minutes or quick release.','Serve with sour cream, cheese, lime, and remaining bacon.']},
+  {id:u(),name:'Beef Stroganoff',category:'Beef',url:'https://selfproclaimedfoodie.com/pressure-cooker-beef-stroganoff/',ingredients:['1½ lbs beef tenderloin fillet, sliced into ½-inch strips','Salt and pepper','3 tbsp butter, divided','2 tbsp flour','2 cups beef consommé or rich stock','2 tsp Dijon mustard','¼ cup sour cream','1 tbsp extra-virgin olive oil','½ small onion, chopped','⅓ cup cornichons, chopped','1 lb extra wide egg noodles, cooked','Chopped parsley'],instructions:['Season beef strips with salt and pepper.','Heat a skillet over medium. Melt 2 tbsp butter with flour; cook 1 minute. Whisk in consommé. Thicken 1 minute. Stir in mustard and sour cream; thicken 2–3 minutes. Remove from heat.','Heat a second skillet over high heat. Add 1 tbsp oil and 1 tbsp butter. Add beef and onion. Cook over high heat until browned on both sides, 3–4 minutes total. Add cornichons.','Combine meat, sauce, and egg noodles. Garnish with parsley.']},
+  {id:u(),name:'Red Curry Chicken Stir Fry',category:'Chicken',url:'https://pinchofyum.com/red-curry-chicken-stir-fry-with-spicy-cashew-sauce',ingredients:['1 lb chicken breasts','2 tbsp cornstarch','½ tsp garlic powder','1 tsp kosher salt','Freshly ground black pepper','2 tbsp avocado oil','2 tbsp red curry paste','2 tbsp brown sugar','1¼ cup roasted salted cashews','½ cup water','2 tbsp maple syrup','2 tbsp sriracha','1½ tbsp soy sauce','1 clove garlic','Juice of 1–2 limes','1 tsp ginger paste or fresh ginger','½ tsp kosher salt','2 cups small steamed broccoli florets','2–3 cups cooked rice'],instructions:['Make the spicy cashew sauce: blend cashews, water, maple syrup, sriracha, soy sauce, garlic, lime juice, ginger, and salt in a blender until very smooth.','Cut chicken into very thin pieces. Toss with cornstarch, garlic powder, salt, and pepper.','Add avocado oil to a nonstick pan over medium-high. Add curry paste and brown sugar; cook a few minutes until caramelized. Add chicken. Let sit undisturbed several minutes until golden brown. Flip and repeat until cooked through.','Serve chicken on cooked rice with broccoli and cashew sauce over everything.']},
+  {id:u(),name:'Chicken Pasta (Sun-Dried Tomato)',category:'Chicken',url:'https://thebigmansworld.com/healthy-pasta-recipes/',ingredients:['1 lb penne pasta','1 can (8 oz) sun-dried tomatoes packed in water, drained and chopped','2 tbsp olive oil','2 frozen garlic cubes','1 lb chicken breast, chopped','1 tbsp Italian seasoning','½ tsp salt + ¼ tsp pepper','¾ cup Parmesan cheese, divided','1 cup light cream','1 tbsp Dijon mustard','2 cups baby spinach','1 tsp lemon juice'],instructions:['Cook pasta per package directions. Drain and reserve ½ cup pasta water.','Heat oil in a large skillet. Add garlic cubes until fragrant. Add chicken, Italian seasoning, salt, and pepper. Cook until no longer pink. Stir in ¼ cup Parmesan. Remove chicken.','Add pasta to skillet with ¼ cup pasta water. Simmer, then add remaining Parmesan, cream, mustard, and spinach. Once thickened, add chicken and sun-dried tomatoes. Simmer 5 minutes.','Remove from heat. Drizzle with lemon juice and serve immediately.']},
+  {id:u(),name:'Lemon Chicken Orzo',category:'Chicken',url:'https://www.halfbakedharvest.com/lemon-butter-dijon-chicken-and-orzo/',ingredients:['3 tbsp extra virgin olive oil','2 tbsp Dijon mustard','4 cloves garlic, chopped','2 small shallots, chopped','2 tbsp chopped fresh rosemary','1 tsp smoked paprika','Kosher salt and black pepper','2 lbs boneless chicken breasts or thighs','3 tbsp salted butter','1 lemon, sliced','1½ cups orzo pasta','3 cups low-sodium chicken broth','2 cups chopped kale','Chopped fresh dill for serving','4–6 oz feta cheese','¼ cup plain Greek yogurt','1 clove garlic, grated','Juice from 1 lemon','¼ tsp smoked paprika + crushed red pepper flakes'],instructions:['Preheat oven to 400°F. Mix 2 tbsp olive oil, Dijon, 3 cloves garlic, 1 shallot, rosemary, paprika, salt, and pepper. Toss with chicken and marinate.','Heat 1 tbsp olive oil in a large oven-safe skillet over medium-high. Sear chicken on both sides until golden, 3–5 minutes. During last 2 minutes, add butter and lemon slices. Remove everything.','Add orzo, 1 shallot, and 1 clove garlic. Toast about 2 minutes. Add broth, kale, and 2 tbsp lemon juice. Bring to a boil. Return chicken and lemon to skillet. Bake uncovered 15 minutes.','Make feta sauce: blend feta, yogurt, garlic, and lemon juice until creamy. Stir in paprika and red pepper flakes.','Serve chicken and orzo topped with feta sauce and dill.']},
+  {id:u(),name:'Chick-fil-A Rival Chicken Strips',category:'Chicken',url:'http://www.lifemadefull.com/chick-fil-a-rival-chicken-strips/',ingredients:['3 lbs chicken tenderloins, skinless','3 tbsp olive oil','Juice of ½ lemon','1 tbsp paprika','1 tbsp garlic salt','¼ cup tapioca flour or arrowroot starch','½ cup coconut oil'],instructions:['Combine chicken, olive oil, lemon juice, paprika, garlic salt, and tapioca flour in a large bowl. Toss to coat.','Heat coconut oil in a cast iron skillet over medium-high heat.','Add chicken pieces without crowding. Fry about 3 minutes per side until no longer pink inside.','Remove to paper towels to drain. Repeat as needed. Eat promptly.']},
+  {id:u(),name:'Change Your Life Chicken',category:'Chicken',url:'https://www.thelazygeniuscollective.com/cylc',ingredients:['Chicken thighs, bone-in with skin','Salt and pepper','Favorite seasonings','Olive oil','Two handfuls of vegetables per person (red onion, green beans, potatoes, carrots, leek, or asparagus)'],instructions:['Preheat oven to 500°F. Line a baking sheet with heavy-duty foil.','Cut vegetables to bite size and toss with olive oil, salt, pepper, and seasonings.','Peel skin back from chicken and generously season both sides with salt and pepper. Pat dry with paper towels.','Place chicken skin-side up directly on top of the vegetables.','Bake at 500°F for 50 minutes.']},
+  {id:u(),name:'Best Drumsticks',category:'Chicken',url:'http://everclevermom.com/2014/05/easy-weeknight-paleo-chicken-best-drumstick-recipe-ever/',ingredients:['5–10 raw chicken drumsticks','Olive oil or coconut oil','Salt, black pepper, garlic powder, paprika, cinnamon','Cayenne pepper (optional)'],instructions:['Preheat oven to 400°F. Line a cookie sheet with parchment paper.','Lay chicken on sheet so none are touching. Coat with oil.','Sprinkle evenly with all seasonings, starting with salt.','Bake 30 minutes. Turn over. Bake another 30 minutes.']},
+  {id:u(),name:'Egg Roll Tacos',category:'Chicken',url:'https://pinchofyum.com/egg-roll-tacos',ingredients:['1.5 lbs ground chicken, turkey, or pork','3 tbsp soy sauce','1.5 tbsp chili crisp','1.5 tbsp frozen garlic cubes','1.5 tbsp frozen ginger cubes','1.5 cups shredded cabbage and carrot mix (coleslaw bag)','10–12 small flour tortillas','2–3 tbsp avocado or sesame oil','Extra fresh cabbage/carrot mix, cilantro, green onion, chili crisp, and Gochujang sauce for topping'],instructions:['Mix ground meat, soy sauce, chili crisp, garlic cubes, ginger cubes, and veggie mix together.','Press mixture onto one side of each tortilla.','Heat skillet over medium-high. Add oil. Working in batches, cook tacos meat-side down 3–4 minutes until browned. Flip to tortilla side 1 minute. Flip back to ensure fully cooked.','Top with fresh cabbage, cilantro or green onions, and sauces of choice. Fold in half to eat.']},
+  {id:u(),name:'Lettuce Wraps',category:'Chicken',url:'http://www.onelovelylife.com/chicken-lettuce-wraps',ingredients:['1 lb ground turkey','8 oz button or baby bella mushrooms, finely minced','3 green onions, sliced','1 red bell pepper, diced','1 cup shredded carrots','2 frozen ginger cubes','2 frozen garlic cubes','1 tbsp olive or coconut oil','Salt','¼–⅓ cup soy sauce or coconut aminos','2 heads butter lettuce or iceberg, leaves separated','Equal parts Dijon mustard and coconut aminos for dipping sauce','Chili oil or Sriracha to taste'],instructions:['Heat oil in a medium sauté pan over medium heat. Add turkey and cook until lightly browned, breaking it up as it cooks.','Add mushrooms, white parts of green onions, bell pepper, carrots, ginger, and garlic cubes. Cook until fragrant and cooked through.','Add remaining green onions and soy sauce. Stir to coat.','Mix dipping sauce ingredients in a small bowl.','Serve filling in lettuce cups with dipping sauce.']},
+  {id:u(),name:'Garlic Ginger Chicken & Broccoli',category:'Chicken',url:'https://pinchofyum.com/garlic-ginger-chicken',ingredients:['1.5 lbs boneless skinless chicken breasts or thighs, cut into strips','1 large head broccoli, cut into florets','2 red peppers, cut into strips','Sesame oil, sesame seeds, and green onions for topping','4 frozen garlic cubes','2 tbsp frozen ginger cubes','¾ cup low sodium soy sauce','½ cup water','¼ cup white vinegar','¼ cup oil','4 Medjool dates or ¼ cup honey'],instructions:['Preheat oven to 425°F. Blend all sauce ingredients until smooth.','Place chicken, broccoli, and red pepper on a large sheet pan. Pour about ½ cup sauce over chicken and a few tbsp over veggies.','Bake 10–15 minutes until chicken is cooked through.','Simmer another ½ cup sauce in a small saucepan until thickened.','Drizzle thickened sauce over finished chicken and broccoli. Top with sesame oil, sesame seeds, and green onions. Serve over rice.']},
+  {id:u(),name:'Chicken & Green Beans',category:'Chicken',url:'',ingredients:['1 lb green beans, stemmed and cut in half','½ lb chicken thighs or breast, cut into ¼-inch slices','1 tbsp oyster sauce','1 tbsp soy sauce','½ tbsp dark soy sauce','1 tsp cornstarch + ½ tsp sugar + ⅛ tsp baking soda (for marinade)','6–8 garlic cloves, finely minced','¼ tsp chicken bouillon + ¼ tsp sugar + ⅛ tsp kosher salt (for garlic)','Cooking oil','Rice for serving'],instructions:['Stem and cut green beans in half. Wash and pat dry. Set aside.','Marinate sliced chicken with oyster sauce, soy sauce, dark soy sauce, cornstarch, sugar, and baking soda. Marinate 15 minutes.','Season minced garlic with chicken bouillon, sugar, and salt. Mix well and set aside.','In a large wok, heat about ½ cup oil to 350°F. Add green beans and fry 30 seconds (or blanch in boiling water 1 minute). Strain immediately and set aside.','Leave 1–2 tbsp oil in wok. Sauté chicken until cooked through. Shift to one side of wok. Add garlic and sauté 30 seconds–1 minute. Add green beans, toss everything together.','Serve with steamed rice.']},
+  {id:u(),name:'Butter Chicken',category:'Chicken',url:'https://foodess.com/butter-chicken/',ingredients:['2.25 lbs boneless skinless chicken breast, cut in 1–2 inch cubes','2 tbsp lemon juice + 2 frozen garlic cubes + ½ tbsp garam masala + 1 tsp kosher salt (marinade)','¼ cup vegetable oil','2 onions, chopped','6 frozen garlic cubes + 6 frozen ginger cubes','1 tbsp garam masala + ½ tbsp paprika + ¼ tsp cinnamon + 2 tsp kosher salt','1 can (14.5 oz) diced tomatoes','¾ cup heavy cream','2 tbsp butter','Cilantro for garnish','Naan and rice for serving'],instructions:['Combine chicken with lemon juice, garlic cubes, garam masala, and salt. Marinate at least 30 minutes (overnight is best).','Heat oil in a large saucepan over medium heat. Slowly cook onions until golden, about 20 minutes.','Add garlic cubes; cook 1 minute. Stir in garam masala, paprika, cinnamon, and salt; cook 1 minute. Add tomatoes and cook 2 minutes. Add cream and purée with immersion blender until smooth.','Return sauce to simmer. Add chicken (discard marinade). Cover and simmer over medium-low 12 minutes until cooked through.','Stir in butter. Adjust salt. Garnish with cilantro. Serve over rice with naan.']},
+  {id:u(),name:'Marry Me Chicken',category:'Chicken',url:'https://selfproclaimedfoodie.com/marry-me-chicken/',ingredients:['7 oz sundried tomatoes in oil (reserve oil)','2 lbs boneless skinless chicken breasts','Salt and pepper','½ cup all-purpose flour','2 tbsp butter','1 small yellow onion, diced','3 cloves garlic, minced','1 cup chicken broth','1 cup heavy cream','1 tsp Italian seasoning','½ cup Parmesan cheese, finely grated','16 oz pasta'],instructions:['Separate sundried tomatoes from oil. Reserve oil. Dice ½ cup of the tomatoes small.','Flatten chicken to ½–¾ inch thickness. Cut into 4–6 portions. Season with salt and pepper. Dredge in flour.','Heat a large skillet over medium-high. Add 3 tbsp reserved oil. Cook chicken until golden brown on both sides, 5–10 minutes per side. Transfer to plate, tent with foil. Cook pasta in boiling salted water.','Add butter to pan with onion. Cook 5 minutes, then add garlic and cook 1–2 more minutes. Reduce heat. Add broth, cream, diced sundried tomatoes, Italian seasoning, and Parmesan. Stir to combine.','Return chicken to sauce. Simmer gently until chicken reaches 165°F. Toss pasta with 2 tbsp reserved oil. Serve pasta topped with chicken and sauce.']},
+  {id:u(),name:'Pizza Night',category:'Chicken',url:'',ingredients:['Pizza dough','Alfredo sauce, BBQ sauce, or fig jam (by variation)','Grilled chicken, shredded or chunked','Mozzarella, cheddar, or Colby Jack cheese','Spinach, sun-dried tomatoes, arugula, prosciutto (by variation)','Red pepper flakes, cilantro, or parsley for topping'],instructions:['Preheat oven to 425°F or per dough package directions.','Roll out dough onto a pizza pan or stone.','Add sauce and toppings per chosen variation: Spinach Chicken Alfredo, BBQ Chicken, Fig Prosciutto, or Chicken Bacon Ranch.','Bake 12–15 minutes until crust is golden and cheese is bubbling.','For Fig Prosciutto, add prosciutto, arugula, and Parmesan after baking. For BBQ Chicken, add cilantro after baking.']},
+  {id:u(),name:'Sheet Pan Dijon Chicken & Veg',category:'Chicken',url:'https://www.halfbakedharvest.com/sheet-pan-lemon-rosemary-dijon-chicken/',ingredients:['2 lbs boneless chicken breasts or thighs','3–4 medium russet potatoes, cut into 2-inch pieces','1 small bunch asparagus, ends trimmed','6 tbsp extra virgin olive oil','2 tbsp Dijon mustard','4 frozen garlic cubes','1 medium shallot, finely chopped','2 tbsp chopped fresh rosemary','1 tsp smoked paprika','Juice and zest of 1 lemon','1 tbsp raw sesame seeds','Salt and pepper','4–6 oz feta cheese + ¼ cup Greek yogurt + 1 garlic cube + juice of 1 lemon + fresh dill/basil/parsley + ¼ tsp smoked paprika + red pepper flakes (for feta sauce)'],instructions:['Preheat oven to 425°F. Combine 4 tbsp olive oil, mustard, garlic, shallot, rosemary, paprika, and lemon zest and juice. Toss with chicken and marinate 15–20 minutes.','Toss potatoes with 2 tbsp olive oil and sesame seeds. Season. Roast 20 minutes until tender.','Push potatoes to one side. Add chicken and asparagus. Drizzle asparagus with oil, salt, and pepper. Roast 20–25 more minutes until chicken is cooked through.','Blend feta, yogurt, garlic, and lemon juice until smooth. Stir in herbs, paprika, and red pepper flakes.','Serve chicken, potatoes, and asparagus with feta sauce.']},
+  {id:u(),name:'Ginger Peanut Chicken',category:'Chicken',url:'https://pinchofyum.com/ginger-peanut-chicken-with-coconut-rice',ingredients:['1¼ lbs chicken thighs, fat trimmed, cut into bite-sized pieces','1-inch piece ginger, grated','3 green onions, sliced (white and green parts separated)','Zest and juice of 1–2 limes','2 tbsp brown sugar','1½ tsp salt','1 tbsp olive or avocado oil','2–3 cloves garlic, minced','½ cup chopped roasted peanuts','½ cup chopped cilantro','1 cup spinach or bok choy','2 cups jasmine rice + 1½ cups water + 1 can coconut milk + pinch of salt (for coconut rice)'],instructions:['Marinate chicken: mix chicken with ginger, green onion whites, lime zest, brown sugar, salt, and oil. Marinate 20 minutes–2 hours.','Cook coconut rice: add rice, water, coconut milk, and salt to Instant Pot. Cook on high pressure 3 minutes, natural release 10–15 minutes. Fluff with a fork.','Heat a large skillet to medium-high. Cook marinated chicken in 1–2 batches, leaving undisturbed several minutes to caramelize.','When all chicken is cooked, reduce heat. Add peanuts and garlic. Sauté 3–5 minutes.','Add cilantro, green onion greens, and spinach. Squeeze lime juice. Season with salt and pepper. Serve over coconut rice.']},
+  {id:u(),name:'Pan Seared Tilapia',category:'Seafood',url:'',ingredients:['Tilapia fillets','½–1 cup flour','Salt and lemon pepper','1 tbsp olive oil','1 pat butter','Chopped parsley and lemon juice for finishing'],instructions:['Heat skillet. Add olive oil and butter.','Season flour with salt and lemon pepper. Dredge fish in flour to coat both sides.','Sauté 3–4 minutes per side until golden brown and crispy outside, opaque inside.','Drizzle with chopped parsley and lemon juice, or make a pan sauce.']},
+  {id:u(),name:'Salmon Burgers',category:'Seafood',url:'https://www.halfbakedharvest.com/chipotle-salmon-burgers/',ingredients:['28 oz canned salmon','1 cup Panko breadcrumbs','4 eggs','1 tbsp chipotle sauce','2 tbsp tamari or soy sauce','2 tsp honey','2 frozen garlic cubes','1 tsp chili powder','Kosher salt and black pepper','6–8 Havarti cheese slices','Avocado or olive oil for cooking','6–8 brioche burger buns, toasted','Shredded lettuce and avocado for serving'],instructions:['In a bowl mix salmon, Panko, eggs, chipotle, tamari, honey, garlic, chili powder, salt, and pepper. Form into 6 burgers.','Heat oil in a large skillet over medium. Fry burgers 3–5 minutes each side until crispy. Add a cheese slice to each, cook until melted, 1–2 minutes.','Layer toasted buns with mayo, cheesy burgers, lettuce, and avocado.']},
+  {id:u(),name:'Baked Salmon with Lemon Herb Sauce',category:'Seafood',url:'https://pinchofyum.com/baked-salmon-with-amazing-lemon-sauce',ingredients:['1 lb small gold potatoes, cut into bite-sized pieces','Olive oil, garlic powder, salt, and pepper','2–3 cups broccoli florets','1–2 lbs salmon','6 tbsp butter','1–2 cloves garlic, minced','1 shallot, minced','2–3 sprigs fresh thyme','½ cup heavy cream','½ cup chicken broth','Juice of 1 lemon','2 tbsp chopped fresh parsley or basil','Salt and pepper'],instructions:['Preheat oven to 400°F. Toss potatoes with olive oil, garlic powder, salt, and pepper. Roast 25 minutes until lightly browned.','Melt butter over medium-low. Add garlic, shallot, and thyme; sauté 3–5 minutes. Add broth and cream; simmer until sauce coats the back of a spoon. Remove thyme. Whisk in lemon juice, stir in herbs, season.','Add broccoli and salmon to potato pan. Brush with oil, salt, and pepper. Bake 10–15 minutes until salmon flakes easily.','Serve salmon, potatoes, and broccoli with lemon herb sauce.']},
+  {id:u(),name:'Honey Teriyaki Glazed Salmon',category:'Seafood',url:'https://foodess.com/honey-teriyaki-glazed-salmon/',ingredients:['2–2.5 lbs salmon fillet','¼ cup soy sauce','3 tbsp honey','1 tbsp rice vinegar','1 tsp sesame oil','2 frozen garlic cubes','4 frozen ginger cubes','1 tbsp cornstarch + 1 tbsp water (slurry)','Sesame seeds and green onions for serving','Rice for serving'],instructions:['Whisk soy sauce, honey, rice vinegar, sesame oil, garlic cubes, and ginger cubes in a small saucepan.','Bring to a simmer over medium heat. Add cornstarch slurry and stir until thickened, 1–2 minutes.','Pat salmon dry. Heat an oven-safe skillet over medium-high with a little oil. Sear salmon skin-side up 2–3 minutes.','Flip salmon. Brush generously with teriyaki glaze. Transfer skillet to oven and bake 6–8 minutes until salmon flakes easily.','Drizzle with remaining glaze. Top with sesame seeds and green onions. Serve with rice.']},
+  {id:u(),name:'Fish Tacos',category:'Seafood',url:'https://pinchofyum.com/best-easy-fish-tacos',ingredients:['2 portions salmon (about 1.5 lbs)','¼ cup flour','Large flour tortillas, warmed','1 bag broccoli slaw','1 tbsp chili powder + ¼ tsp cayenne + ½ tsp sugar + ¼ tsp salt (for coating)','Thinly sliced avocado, fresh cilantro, 1 can black beans, green onions, grape tomatoes, lime wedges (toppings)','¼ cup sour cream + ¼ cup mayo + 1 tbsp Mrs. Dash Southwest Chipotle + ⅛ cup Lawry\'s Baja Chipotle marinade (dressing)'],instructions:['Mix chipotle dressing. Toss half with broccoli slaw. Reserve rest for topping.','Mix chili powder, cayenne, sugar, and salt with flour. Dredge salmon on both sides.','Cook salmon in a skillet over medium-high until browned on both sides and just opaque. Flake into chunks.','Warm tortillas. Set up toppings bar.','Arrange flaked salmon and toppings on one half of tortilla. Drizzle with reserved dressing. Fold in half to serve.']},
+  {id:u(),name:'Crab Cakes',category:'Seafood',url:'',ingredients:['1 lb lump crab meat','¼ cup chopped green onion','½ white onion, chopped small','1 red bell pepper, chopped small','2 tbsp fresh lemon juice','1 large egg, whisked','⅓ cup mayonnaise','1½ tsp prepared yellow mustard','½ tsp garlic powder','1 tsp sea salt','⅛ tsp cayenne pepper','⅓ cup almond flour plus extra for dusting','4 tbsp coconut oil'],instructions:['Place all ingredients except coconut oil in a large mixing bowl. Mix gently until combined, adding more almond flour if mixture is too wet. Shape into cakes and dust lightly with almond flour.','Heat coconut oil in a large skillet over medium-high. Cook crab cakes in batches 3–5 minutes on each side until browned, turning very gently once.','Place on paper towel-lined plate. Serve immediately with arugula salad.']},
+  {id:u(),name:'Pad Thai',category:'Seafood',url:'https://cupofjo.com/2013/08/the-best-homemade-pad-thai/',ingredients:['8 oz Pad Thai noodles','3 tbsp canola oil','1 lb frozen peeled tail-on shrimp','1 bunch green onions, chopped (white and green parts separated)','4 cloves garlic, minced','¼ cup peanuts, chopped','2–4 eggs, whisked','¼ cup chicken stock','2 tbsp brown sugar','3 tbsp fish sauce','1 tbsp soy sauce','2 tbsp tamarind paste (optional)','1 lime'],instructions:['Place noodles in a bowl and pour 6 cups boiling water over them. Let sit 5–8 minutes until softened but not soggy. Drain and toss with 1 tbsp oil.','Defrost shrimp in lukewarm water 15–20 minutes. Drain and dry. Combine stock, sugar, fish and soy sauces, tamarind, and garlic. Marinate shrimp in 2–3 tbsp of the sauce.','Heat wok over medium-high. Add 1 tbsp oil and sear shrimp 2–3 minutes per side. Remove and set aside.','Return wok to medium-high. Add remaining oil. Add white parts of green onion with a dash of salt. Add eggs and scramble 30 seconds. Push to side. Add noodles, pour in remaining sauce and toss to coat.','Once sauce is absorbed, add shrimp, green onion tops, and lime juice. Toss together. Serve hot with chopped peanuts and extra lime.']},
+  {id:u(),name:'Chop and Drop',category:'Pork',url:'',ingredients:['1 package (~1 lb) pre-cooked sausage links, cut into 1-inch pieces','2 potatoes (yam and/or sweet potato), cut into 2-inch chunks','2 medium carrots, chopped','1 red pepper, sliced','½ red onion, sliced','Optional: butternut squash, Brussels sprouts, or broccoli','3 frozen garlic cubes','2 tbsp olive oil','1½ tbsp Italian seasoning','Pinch of red pepper flakes','Salt and pepper'],instructions:['Preheat oven to 375°F.','In a large bowl, add all veggies, garlic, and sausage. Add olive oil and toss to coat. Add all seasonings and mix.','Spread on a greased or foil-lined large rimmed baking sheet.','Bake uncovered 35–45 minutes, turning twice during cooking. Done when sweet potatoes are soft.']},
+  {id:u(),name:'Baked Tortellini with Sausage',category:'Pork',url:'https://pinchofyum.com/baked-tortellini-with-sausage',ingredients:['1 tbsp avocado or olive oil','1 lb ground Italian sausage','2–3 carrots, chopped','2–3 stalks celery, chopped','1 yellow onion, minced','3 large cloves garlic, minced','1 tsp fennel seeds, crushed','1 jar (28 oz) tomato sauce','10–15 oz refrigerated spinach tortellini','1½–2 cups chicken broth','2 cups baby spinach, torn','½ cup shredded mozzarella + ¼ cup grated Parmesan + chopped parsley for topping'],instructions:['Heat a large oven-safe skillet over medium-high. Add oil and sausage. Brown well, breaking apart. Transfer to a bowl, drain excess oil.','Add veggies and cook until fragrant and soft. Add fennel seeds. Add sausage back in.','Add tomato sauce, tortellini, and 1 cup broth. Simmer 5 minutes to cook tortellini, adding more broth as needed.','Taste and adjust salt. Add spinach and stir until wilted. Top with mozzarella. Bake at 375°F for 8–10 minutes until cheese is melted.','Sprinkle with Parmesan and parsley. Serve with garlic bread.']},
+  {id:u(),name:'Creole Chicken & Sausage',category:'Pork',url:'https://pinchofyum.com/15-minute-meal-prep-creole-chicken-and-sausage',ingredients:['1 lb boneless skinless chicken breasts','12–16 oz Andouille sausage, sliced','1 can (14 oz) fire roasted crushed tomatoes','2–3 tbsp tomato paste (optional)','2 red bell peppers, chopped','½ onion, diced','3 cloves garlic, minced','1 tbsp Creole seasoning','1–2 tsp salt','Rice, cheese, cilantro, green onions, hot sauce, and sour cream for serving'],instructions:['Prep all ingredients.','Cook everything together in an Instant Pot on high pressure for about 8 minutes.','Shred chicken directly in the pot. Taste and adjust seasoning.','Serve over rice with desired toppings.']},
+  {id:u(),name:'Baked Beans with Sausage',category:'Pork',url:'',ingredients:['1 lb sausage (or 2 packages turkey sausage)','4 cans assorted beans (include green beans as one)','1 can (31 oz) pork and beans','½ cup brown sugar','½ cup barbecue sauce','½ cup ketchup','½ large onion, chopped','1 can (10 oz) crushed tomatoes','1 tbsp Worcestershire','1 tsp mustard','½ tsp salt + ½ tsp pepper'],instructions:['Preheat oven to 350°F.','Brown sausage, breaking into pieces. Drain. (If using pre-cooked turkey sausage, just slice.)','Mix sausage with all remaining ingredients. Pour into a greased 13×9 inch pan.','Bake 1 hour. Top with crispy bacon if desired.']},
+  {id:u(),name:'Ham & Cheese Sliders',category:'Pork',url:'https://www.onceuponachef.com/recipes/ham-cheese-sliders.html',ingredients:['4 tbsp unsalted butter, melted','1 tbsp Dijon mustard','2 tsp Worcestershire sauce','1½ tbsp poppy seeds','½ tsp garlic powder','Heaping ¼ tsp salt','1 pack (12-count) Kings Hawaiian Sweet Rolls','2 tbsp Dijon mustard','⅔ lb sliced Swiss cheese','½ lb sliced Black Forest ham'],instructions:['Preheat oven to 350°F. Whisk together butter, Dijon, Worcestershire, poppy seeds, garlic powder, and salt for butter sauce.','Slice rolls in half horizontally, keeping tops and bottoms intact. Spread Dijon over cut sides of both halves.','Place bottom half in a 9-inch square baking pan. Layer half the cheese, then all the ham, then remaining cheese. Cover with roll tops.','Evenly spoon butter sauce over tops, letting it drip down sides.','Bake 22–25 minutes until top is golden brown. Cool 15–20 minutes. Slice into sandwiches.']},
+  {id:u(),name:"Grandma Rideout's Beans & Cornbread",category:'Pork',url:'',ingredients:['Beans (any kind or mix — red beans are great)','Hunk of ham, cut into bite-size pieces','Ketchup, sugar, salt, pepper to taste','Frozen garlic cubes','Salsa or crushed tomatoes','Cornbread for serving'],instructions:['The night before, put beans in a bowl of water to soak overnight.','Drain beans and put in Instant Pot with fresh water. Add ham and lots of seasonings. Liquid should be several inches from top.','Cook on high pressure 40 minutes. Natural release. Taste broth and adjust seasonings.','Serve with cornbread, ketchup, and dill pickle relish.']},
+  {id:u(),name:'Garlic Chickpea Noodles',category:'Vegetarian',url:'',ingredients:['1 package (8 oz) chickpea spaghetti','2 tsp vegetable oil','1 red bell pepper, thinly sliced','1 carrot, thinly sliced or matchstick cut','1 head broccoli, cut into florets','Green onions and toasted sesame seeds for serving','¼ cup low-sodium soy sauce','4 frozen garlic cubes','2 tbsp coconut sugar or brown sugar','1 tbsp chili-garlic sauce or Sriracha','1 tbsp hoisin sauce','1 tbsp toasted sesame oil'],instructions:['Cook chickpea spaghetti per package directions. Drain and rinse with cold water.','Whisk together all sauce ingredients.','Heat oil in a large skillet over medium-high. Add bell pepper and carrot. Cook 3 minutes. Add broccoli and cook 2 more minutes.','Add noodles and sauce. Fold gently to combine. Cook 2–3 minutes until sauce thickens.','Serve garnished with green onion and sesame seeds.']},
+  {id:u(),name:'Mexican Sweet Potato Hash',category:'Vegetarian',url:'',ingredients:['2 tbsp olive oil','2 lbs sweet potatoes, peeled and cut into ½-inch cubes','1 large shallot, thinly sliced','1 can (15 oz) black beans, rinsed and drained','5 oz baby spinach','1 tbsp lime juice','1 tsp sea salt + ½ tsp cumin + ½ tsp chili powder'],instructions:['Heat olive oil in a large non-stick skillet. Cook potatoes over medium-high heat, stirring occasionally, until brown and tender, about 15 minutes.','Add shallot, black beans, salt, cumin, and chili powder. Sauté 3 minutes until shallot is soft.','Fold in spinach and cook until wilted. Drizzle with lime juice.','Serve with a fried egg and a dollop of sour cream or Greek yogurt.']},
+  {id:u(),name:'Zucchini Pasta Alfredo',category:'Vegetarian',url:'https://www.halfbakedharvest.com/zucchini-pasta-alfredo/',ingredients:['1 lb linguine or fettuccini','6 tbsp salted butter','1 lemon, sliced','½ cup fresh basil, chopped','1 yellow onion, chopped','2 cloves garlic, chopped','2 zucchini, grated','2 tbsp fresh thyme leaves','Salt, black pepper, and chili flakes','1 cup heavy cream','1½ cups grated Parmesan cheese'],instructions:['Cook pasta in salted boiling water per package directions. Reserve ½ cup pasta water before draining.','Melt 2 tbsp butter in a large skillet over medium. Add lemon slices and sear until caramelized, about 1 minute per side. Remove and finely chop with basil.','To same skillet, add 4 tbsp butter and onion. Cook until caramelized, 8–10 minutes. Stir in garlic, zucchini, thyme, salt, pepper, and chili flakes. Cook 5 more minutes.','Add ½ cup pasta water and cream. Simmer 5 minutes until slightly thickened. Stir in Parmesan, then toss in pasta. Cook 2 minutes.','Serve topped with the lemon-basil mix.']},
+  {id:u(),name:'Pesto Pasta',category:'Vegetarian',url:'https://www.loveandlemons.com/pesto-pasta/',ingredients:['6 oz spaghetti','1 jar basil pesto','Extra-virgin olive oil','Fresh lemon juice','4 cups arugula','2 tbsp pine nuts','Pinches of red pepper flakes','Sea salt and freshly ground black pepper','Freshly grated Parmesan'],instructions:['Cook pasta in a large pot of salted boiling water per package directions. Reserve ½ cup cooking liquid. Drain and toss with a little olive oil.','In a large skillet over very low heat, add pesto and ¼ cup pasta water. Stir to combine.','Add pasta and toss to coat, adding more pasta water as needed for a loose sauce.','Turn off heat. Add lemon juice, salt, and pepper. Add arugula and toss to barely wilt.','Garnish with red pepper flakes and pine nuts. Serve.']},
+  {id:u(),name:'Chickpea Curry',category:'Vegetarian',url:'https://pinchofyum.com/chickpea-curry',ingredients:['1½ cups jasmine rice + 1½ cups light coconut milk + ½ cup coconut water + 1 tbsp coconut oil + ¼ tsp salt (coconut rice)','1½ tbsp coconut oil','2 leeks, cleaned, trimmed, and sliced','2 red peppers, sliced','2 frozen garlic cubes + 1 frozen ginger cube','2 tbsp red curry paste','⅓ cup peas','1 can (14 oz) full-fat coconut milk','1½ cups cooked chickpeas','3 tbsp fresh cilantro, torn','Salt and pepper'],instructions:['Combine rice, coconut milk, coconut water, and salt in a saucepan. Bring to a boil, reduce to low, cover and cook 15–18 minutes. Stir in coconut oil.','Heat coconut oil in a large skillet over medium. Add leeks, red peppers, salt, and pepper. Cover and cook 5 minutes.','Add garlic cubes, ginger cube, and curry paste. Stir to coat. Cook 5 minutes.','Add coconut milk. Bring to a boil, then reduce heat. Cover and cook 5 minutes.','Stir in peas, chickpeas, and cilantro. Cook 5 more minutes. Serve over coconut rice.']},
+  {id:u(),name:'Garlic Sesame Noodles',category:'Vegetarian',url:'https://yupitsvegan.com/garlic-sesame-noodles/',ingredients:['8 oz chickpea spaghetti','2 tsp vegetable oil','1 red bell pepper, thinly sliced','1 carrot, thinly sliced or matchstick cut','1 head broccoli, cut into florets','Green onions and 1 tbsp toasted sesame seeds for serving','¼ cup low-sodium soy sauce + 4 cloves garlic, minced + 2 tbsp coconut sugar + 1 tbsp chili-garlic sauce + 1 tbsp hoisin sauce + 1 tbsp toasted sesame oil (sauce)'],instructions:['Cook spaghetti per package directions. Drain and rinse with cold water.','Whisk all sauce ingredients together.','Heat oil in a large skillet or wok over medium-high. Add bell pepper and carrot. Cook 3 minutes until starting to soften. Add broccoli and cook 2 more minutes.','Add cooked noodles and sauce. Fold gently and cook 3 more minutes until sauce is thickened. Serve hot, garnished with green onion and sesame seeds.']},
+  {id:u(),name:'Egg Salad',category:'Vegetarian',url:'https://www.loveandlemons.com/egg-salad/',ingredients:['¼ cup mayonnaise','1 tsp extra-virgin olive oil','2 tsp Dijon mustard','1 tsp capers','1 tsp fresh lemon juice','1 small garlic clove, minced','¼ tsp turmeric','¼ tsp sea salt','Freshly ground black pepper','6 hard boiled eggs, diced','Pinches of celery seed','2 tbsp chopped fresh dill','2 tbsp chopped fresh chives'],instructions:['In a small bowl, whisk together mayo, olive oil, mustard, capers, lemon juice, garlic, turmeric, salt, and several grinds of black pepper.','Mix in the eggs, then stir in celery seed, dill, and chives. Lightly mash if too chunky. Chill until ready to serve.']},
+  {id:u(),name:'Tomato Basil Artichoke Sandwich',category:'Vegetarian',url:'https://www.loveandlemons.com/tomato-basil-artichoke-picnic-sandwich/',ingredients:['1½ cups edamame','¼ cup basil + 3 tbsp fresh lemon juice + 1 tbsp chopped scallions + ½ small garlic clove + 2 tbsp olive oil + 1–3 tbsp water + ½ tsp sea salt (basil-edamame spread)','1 large baguette','Handful of baby salad greens or arugula','2–3 medium tomatoes, sliced','10 basil leaves','10 jarred roasted artichokes, quartered','Pine nuts (optional)'],instructions:['Make basil-edamame spread: pulse edamame, basil, lemon juice, scallions, garlic, and salt in a food processor. Add olive oil and blend until smooth. Add up to 3 tbsp water for spreadable consistency.','Slice baguette in half and assemble with spread, greens, tomatoes, basil, artichokes, and pine nuts.','Close baguette, wrap in foil, and refrigerate until ready to serve. Slice into 4 servings.']},
+  {id:u(),name:'Quesadillas',category:'No-Brainer / Freezer',url:'',ingredients:['8–10 large flour tortillas','2 cups shredded Mexican blend or cheddar cheese','1 lb cooked shredded chicken (rotisserie works great)','1 can (15 oz) black beans, drained and rinsed','1 cup frozen roasted corn, thawed','1–2 tsp taco seasoning','Butter or oil for pan','Salsa, sour cream, guacamole for serving'],instructions:['Toss chicken with taco seasoning.','Heat skillet over medium with a little butter or oil.','Layer one tortilla with cheese, chicken, beans, and corn. Top with a second tortilla.','Cook 2–3 minutes per side until golden and cheese is melted.','Cut into wedges and serve with salsa, sour cream, and guacamole.']},
+  {id:u(),name:'Tacos',category:'No-Brainer / Freezer',url:'',ingredients:['1.5 lbs ground beef or chicken','1 recipe homemade taco seasoning','Taco shells or flour tortillas','Shredded cheese, sour cream, salsa, lettuce, tomato, guacamole for toppings'],instructions:['Brown meat. Drain fat.','Add taco seasoning and 2–3 tbsp water. Simmer 2 minutes.','Set up toppings bar. Serve in shells or tortillas.']},
+  {id:u(),name:'Sandwiches',category:'No-Brainer / Freezer',url:'',ingredients:['Bread of choice','Deli turkey, ham, or other deli meat','Cheese','Lettuce, tomato, condiments of choice'],instructions:['Assemble and serve.']},
+  {id:u(),name:'Grilled Cheese & Tomato Soup',category:'No-Brainer / Freezer',url:'',ingredients:['Bread of choice','Butter','Shredded or sliced cheese','Tomato soup'],instructions:['Butter one side of each bread slice. Cook in a skillet butter-side down over medium heat. Add cheese, top with second slice butter-side up.','Cook until golden, flip and cook other side.','Serve with tomato soup.']},
+  {id:u(),name:'BLT',category:'No-Brainer / Freezer',url:'',ingredients:['Bacon','Lettuce','Tomato, sliced','Bread of choice','Mayo','Avocado (optional)'],instructions:['Cook bacon until crispy. Toast bread.','Layer bacon, lettuce, tomato, and mayo. Add avocado if desired.']},
+  {id:u(),name:'Baked Potatoes with Pulled Pork',category:'No-Brainer / Freezer',url:'',ingredients:['Large russet potatoes','Precooked pulled pork (store-bought)','Shredded cheese, sour cream, butter, chives'],instructions:['Heat oven to 450°F. Place a wire rack on top of a baking sheet. Poke potato at least 10 times on all sides.','Bake 25 minutes. Brush with butter and sprinkle with kosher salt.','Bake another 20 minutes. Squeeze potato to check for doneness. Continue in 5-minute increments until soft.','Top with pulled pork and desired toppings.']},
+  {id:u(),name:'Hot Dogs',category:'No-Brainer / Freezer',url:'',ingredients:['Hot dogs','Hot dog buns','Ketchup, mustard, relish, and toppings of choice'],instructions:['Grill or cook in a skillet until heated through. Serve in buns with toppings.']},
+  {id:u(),name:'Dumplings & Fried Rice',category:'No-Brainer / Freezer',url:'',ingredients:['Frozen dumplings (pork, chicken, or vegetable)','Frozen fried rice','Soy sauce, chili oil, or dipping sauces'],instructions:['Cook dumplings per package directions (pan-fry for best results).','Cook fried rice per package directions. Serve with dipping sauces.']},
+  {id:u(),name:'Fish Sticks',category:'No-Brainer / Freezer',url:'',ingredients:['Frozen fish sticks','Tartar sauce or ketchup','Lemon wedges'],instructions:['Bake per package directions until crispy.']},
+  {id:u(),name:'Tuna Fish Salad',category:'No-Brainer / Freezer',url:'',ingredients:['2 cans tuna, drained','Mayonnaise to taste','Celery, diced','Salt and pepper','Lemon juice (optional)'],instructions:['Mix tuna with mayo, celery, salt, pepper, and lemon juice. Serve on bread, crackers, or greens.']},
+  {id:u(),name:'Pei Wei Orange Chicken',category:'No-Brainer / Freezer',url:'',ingredients:['Pei Wei frozen orange chicken','Edamame (frozen)','Noodles','Asian sauces of choice'],instructions:['Prepare orange chicken per package directions. Cook edamame and noodles. Serve together.']},
+  {id:u(),name:'Frozen Pizza',category:'No-Brainer / Freezer',url:'',ingredients:['Frozen pizza of choice'],instructions:['Bake pizza per package directions.']}
+  ];
+}
+
+// ── RENDER ───────────────────────────────────────────────────
+function renderAll() { renderCal(); renderGrid(); renderShopping(); renderCooking(); renderCatFilter(); }
+
+function renderCatFilter() {
+  const sel = document.getElementById('fcat');
+  const cur = sel.value;
+  const cats = [...new Set([...allCats(), ...R.map(r => r.category)])];
+  sel.innerHTML = '<option value="">All categories</option>' +
+    cats.map(c => `<option value="${c}"${c === cur ? ' selected' : ''}>${c}</option>`).join('');
+}
+
+function renderCal() {
+  document.getElementById('cal-days').innerHTML = DAYS.map(d => {
+    const meals = plan[d] || [];
+    const chips = meals.map((id, i) => {
+      const r = R.find(x => x.id === id);
+      if (!r) return '';
+      return `<div class="meal-chip" draggable="true"
+        ondragstart="calDragStart('${d}',${i},event)"
+        ondragend="calDragEnd()">
+        <span class="meal-chip-name">${r.name}</span>
+        <button class="chip-rm" onclick="rmMeal('${d}',${i})">&#215;</button>
+      </div>`;
+    }).join('');
+    return `<div class="day-slot" id="ds-${d}"
+      ondragover="event.preventDefault();this.classList.add('over')"
+      ondragleave="this.classList.remove('over')"
+      ondrop="onDrop('${d}',event)">
+      <div class="day-lbl">${d}</div>
+      ${chips}
+    </div>`;
+  }).join('');
+}
+
+function renderGrid() {
+  const srch = (document.getElementById('srch').value || '').toLowerCase();
+  const fcat = document.getElementById('fcat').value || '';
+  const filtered = R.filter(r => (!srch || r.name.toLowerCase().includes(srch)) && (!fcat || r.category === fcat));
+  const grouped = {};
+  filtered.forEach(r => { if (!grouped[r.category]) grouped[r.category] = []; grouped[r.category].push(r); });
+  const el = document.getElementById('grid');
+  if (!filtered.length) { el.innerHTML = '<div class="empty">No recipes found.</div>'; return; }
+  const orderedCats = allCats().filter(c => grouped[c]);
+  const rest = Object.keys(grouped).filter(c => !orderedCats.includes(c));
+  el.innerHTML = [...orderedCats, ...rest].map(cat => `
+    <div class="cat-section">
+      <div class="cat-title">${cat}</div>
+      <div class="recipe-cards">
+        ${grouped[cat].map(r => `
+          <div class="rcard" draggable="true"
+            ondragstart="dragId='${r.id}'"
+            ondragend="dragId=null">
+            <div class="rcard-acts">
+              <button class="icon-btn" onclick="openView('${r.id}')" title="View">&#9432;</button>
+            </div>
+            <div class="rcard-name">${r.name}</div>
+          </div>`).join('')}
+      </div>
+    </div>`).join('');
+}
+
+// ── DRAG & DROP ───────────────────────────────────────────────
+function calDragStart(day, idx, e) { calDragSrc = {day, idx}; dragId = null; e.stopPropagation(); }
+function calDragEnd() { calDragSrc = null; dragId = null; }
+
+function onDrop(day, e) {
+  e.preventDefault();
+  document.getElementById('ds-' + day).classList.remove('over');
+  if (calDragSrc) {
+    const {day: srcDay, idx: srcIdx} = calDragSrc; calDragSrc = null;
+    if (srcDay === day) return;
+    const id = plan[srcDay].splice(srcIdx, 1)[0];
+    if (!plan[day]) plan[day] = [];
+    plan[day].push(id);
+    saveSettings(); renderCal(); renderShopping(); renderCooking();
+  } else if (dragId) {
+    if (!plan[day]) plan[day] = [];
+    plan[day].push(dragId); dragId = null;
+    saveSettings(); renderCal(); renderShopping(); renderCooking();
+  }
+}
+
+function rmMeal(day, i) { plan[day].splice(i, 1); saveSettings(); renderCal(); renderShopping(); renderCooking(); }
+function resetPlan() {
+  if (!confirm('Clear the entire meal plan?')) return;
+  plan = {}; checked = {};
+  saveSettings(); renderAll();
+}
+
+// ── SHOPPING ──────────────────────────────────────────────────
+function getPlannedRecipes() {
+  const ids = new Set(Object.values(plan).flat());
+  return R.filter(r => ids.has(r.id));
+}
+
+function buildShopMap() {
+  const map = {};
+  getPlannedRecipes().forEach(r => {
+    r.ingredients.forEach(ing => {
+      const key = ing.toLowerCase().replace(/[^a-z\s]/g, '').trim();
+      let bestKey = key;
+      for (const k of Object.keys(AISLE_MAP)) { if (key.includes(k)) { bestKey = k; break; } }
+      if (!map[bestKey]) map[bestKey] = {display: ing, count: 0};
+      map[bestKey].count++;
+    });
+  });
+  return map;
+}
+
+function renderShopping() {
+  const el = document.getElementById('shop-list');
+  const smap = buildShopMap();
+  const items = Object.entries(smap).map(([k, v]) => ({key: k, display: v.display, count: v.count, aisle: getAisle(v.display)}));
+  const man = manuals.map(m => ({key: 'm_' + m.id, display: m.name, count: 1, aisle: getAisle(m.name), mid: m.id}));
+  const all = [...items, ...man];
+  if (!all.length) { el.innerHTML = '<div class="empty">Add recipes to your meal plan to generate a shopping list.</div>'; return; }
+  const byAisle = {};
+  all.forEach(x => { if (!byAisle[x.aisle]) byAisle[x.aisle] = []; byAisle[x.aisle].push(x); });
+  el.innerHTML = Object.keys(byAisle).sort().map(aisle => {
+    const its = byAisle[aisle];
+    return `<div class="aisle-sec">
+      <div class="aisle-hd" onclick="toggleAisle(this)">
+        <span class="aisle-nm">${aisle}</span>
+        <span class="aisle-cnt">${its.length} item${its.length !== 1 ? 's' : ''}</span>
+        <span class="aisle-chev open">&#9654;</span>
+      </div>
+      <div class="aisle-items">
+        ${its.map(item => {
+          const ck = checked[item.key];
+          return `<div class="shop-item${ck ? ' done' : ''}">
+            <div class="chk${ck ? ' on' : ''}" onclick="toggleChk('${item.key}',this,event)">${ck ? '&#10003;' : ''}</div>
+            <span class="item-name">${item.display}</span>
+            ${item.count > 1 ? `<span class="item-qty">&#215;${item.count}</span>` : ''}
+            <button class="aisle-edit-btn" onclick="chgAisle(this.dataset.d,this.dataset.a)" data-d="${item.display.replace(/"/g,'&quot;')}" data-a="${aisle}">&#8635; aisle</button>
+            ${item.mid !== undefined ? `<button class="aisle-edit-btn" style="color:var(--terra)" onclick="deleteManual('${item.mid}')">&#10005;</button>` : ''}
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleAisle(hd) {
+  const wrap = hd.nextElementSibling;
+  const chev = hd.querySelector('.aisle-chev');
+  const open = chev.classList.contains('open');
+  wrap.style.display = open ? 'none' : 'block';
+  chev.classList.toggle('open', !open);
+}
+
+function toggleChk(key, el, e) {
+  e.stopPropagation();
+  checked[key] = !checked[key];
+  const item = el.closest('.shop-item');
+  el.classList.toggle('on', !!checked[key]);
+  el.innerHTML = checked[key] ? '&#10003;' : '';
+  item.classList.toggle('done', !!checked[key]);
+  saveSettings();
+}
+
+function clearChecked() { checked = {}; saveSettings(); renderShopping(); }
+
+function addManual() {
+  const inp = document.getElementById('add-inp');
+  const v = inp.value.trim(); if (!v) return;
+  manuals.push({id: uid(), name: v}); inp.value = '';
+  saveSettings(); renderShopping();
+}
+
+function deleteManual(id) {
+  manuals = manuals.filter(m => m.id !== id);
+  delete checked['m_' + id];
+  saveSettings(); renderShopping();
+}
+
+function chgAisle(display, cur) {
+  const nw = prompt(`Move "${display}" to aisle:\n\n${AISLES.join('\n')}\n\nCurrent: ${cur}`);
+  if (!nw) return;
+  if (!AISLES.includes(nw)) { alert('Enter an exact aisle name from the list.'); return; }
+  const key = display.toLowerCase().replace(/[^a-z\s]/g, '').trim();
+  aisleOv[key] = nw; saveSettings(); renderShopping();
+}
+
+function openAisleModal() {
+  const smap = buildShopMap();
+  document.getElementById('aisle-list').innerHTML = Object.entries(smap).map(([k, v]) => {
+    const cur = getAisle(v.display);
+    return `<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border)">
+      <span style="flex:1;font-size:14px">${v.display}</span>
+      <select style="font-size:12px;padding:3px 7px;border:1px solid var(--border);border-radius:4px;background:var(--cream);color:var(--ink);font-family:inherit;outline:none"
+        onchange="aisleOv['${k}']=this.value;saveSettings()">
+        ${AISLES.map(a => `<option value="${a}"${a === cur ? ' selected' : ''}>${a}</option>`).join('')}
+      </select>
+    </div>`;
+  }).join('');
+  openOv('ov-aisle');
+}
+
+// ── COOKING TAB ───────────────────────────────────────────────
+function renderCooking() {
+  const el = document.getElementById('cook-list');
+  const hasAny = DAYS.some(d => (plan[d] || []).length > 0);
+  if (!hasAny) { el.innerHTML = '<div class="empty">Add recipes to your meal plan to see cooking instructions here.</div>'; return; }
+  el.innerHTML = DAYS.map(d => {
+    const meals = (plan[d] || []).map(id => R.find(r => r.id === id)).filter(Boolean);
+    if (!meals.length) return '';
+    return `<div class="cook-day">
+      <div class="cook-day-hd" onclick="toggleCookDay(this)">
+        <span class="cook-day-nm">${d}</span>
+        <span class="cook-day-cnt">${meals.length} recipe${meals.length !== 1 ? 's' : ''}</span>
+        <span class="cook-chev">&#9654;</span>
+      </div>
+      <div class="cook-body">
+        ${meals.map(r => `
+          <div class="cook-recipe">
+            <div class="cook-recipe-nm">
+              ${r.name}
+              ${r.url ? `<a href="${r.url}" target="_blank" class="cook-url">View original &#8599;</a>` : ''}
+              <button onclick="startCookMode('${r.id}')" style="padding:4px 12px;background:var(--sage);color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;font-family:inherit;margin-left:auto">Cook &#9654;</button>
+            </div>
+            <div style="font-size:11px;font-weight:600;color:var(--ink-2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Ingredients</div>
+            <ul style="list-style:disc;padding-left:18px;margin-bottom:14px">
+              ${r.ingredients.map(i => `<li style="font-size:14px;margin-bottom:3px">${i}</li>`).join('')}
+            </ul>
+            <div style="font-size:11px;font-weight:600;color:var(--ink-2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Instructions</div>
+            <ol class="step-list">
+              ${r.instructions.map((s, i) => `<li class="step-item"><span class="step-n">${i+1}</span><span class="step-txt">${s}</span></li>`).join('')}
+            </ol>
+          </div>`).join('')}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleCookDay(hd) {
+  const body = hd.nextElementSibling;
+  const chev = hd.querySelector('.cook-chev');
+  const open = body.classList.contains('open');
+  body.classList.toggle('open', !open); chev.classList.toggle('open', !open); hd.classList.toggle('open', !open);
+}
+
+// ── MODALS ────────────────────────────────────────────────────
+function openOv(id) { document.getElementById(id).classList.remove('hide'); }
+function closeOv(id) { document.getElementById(id).classList.add('hide'); }
+
+function openView(id) {
+  const r = R.find(x => x.id === id); if (!r) return;
+  curViewId = id;
+  document.getElementById('v-title').textContent = r.name;
+  const uw = document.getElementById('v-url-wrap');
+  if (r.url) { uw.style.display = ''; document.getElementById('v-url').href = r.url; } else { uw.style.display = 'none'; }
+  document.getElementById('v-ings').innerHTML = r.ingredients.map(i => `<li>${i}</li>`).join('');
+  document.getElementById('v-steps').innerHTML = r.instructions.map((s, i) =>
+    `<li class="step-item"><span class="step-n">${i+1}</span><span class="step-txt">${s}</span></li>`).join('');
+  openOv('ov-view');
+}
+
+function openEdit(id) {
+  editId = id;
+  const catSel = document.getElementById('e-cat');
+  catSel.innerHTML = allCats().map(c => `<option value="${c}">${c}</option>`).join('');
+  const delBtn = document.getElementById('btn-del');
+  if (id) {
+    const r = R.find(x => x.id === id);
+    document.getElementById('edit-title').textContent = 'Edit Recipe';
+    document.getElementById('e-name').value = r.name;
+    catSel.value = r.category;
+    document.getElementById('e-url').value = r.url || '';
+    document.getElementById('e-ings').value = r.ingredients.join('\n');
+    document.getElementById('e-steps').value = r.instructions.join('\n');
+    delBtn.style.display = '';
+  } else {
+    document.getElementById('edit-title').textContent = 'Add Recipe';
+    document.getElementById('e-name').value = '';
+    catSel.value = allCats()[0];
+    document.getElementById('e-url').value = '';
+    document.getElementById('e-ings').value = '';
+    document.getElementById('e-steps').value = '';
+    delBtn.style.display = 'none';
+  }
+  openOv('ov-edit');
+}
+
+async function saveRecipe() {
+  const name = document.getElementById('e-name').value.trim();
+  if (!name) { alert('Please enter a recipe name.'); return; }
+  const rec = {
+    id: editId || uid(), name,
+    category: document.getElementById('e-cat').value,
+    url: document.getElementById('e-url').value.trim(),
+    ingredients: document.getElementById('e-ings').value.split('\n').map(s => s.trim()).filter(Boolean),
+    instructions: document.getElementById('e-steps').value.split('\n').map(s => s.trim()).filter(Boolean),
+  };
+  await saveRecipeToDb(rec);
+  if (editId) { const i = R.findIndex(r => r.id === editId); if (i >= 0) R[i] = rec; }
+  else { R.push(rec); }
+  closeOv('ov-edit'); renderAll();
+}
+
+async function delRecipe() {
+  if (!editId || !confirm('Delete this recipe?')) return;
+  await deleteRecipeFromDb(editId);
+  R = R.filter(r => r.id !== editId);
+  Object.keys(plan).forEach(d => { plan[d] = (plan[d] || []).filter(id => id !== editId); });
+  saveSettings(); closeOv('ov-edit'); renderAll();
+}
+
+// ── CATEGORIES ────────────────────────────────────────────────
+let catDragIdx = null;
+
+function openCatModal() { renderCatList(); document.getElementById('new-cat-inp').value = ''; openOv('ov-cat'); }
+
+function renderCatList() {
+  const cats = allCats();
+  document.getElementById('cat-list').innerHTML = cats.map((c, i) => `
+    <div class="cat-row" draggable="true"
+      ondragstart="catDragIdx=${i}"
+      ondragover="event.preventDefault();this.classList.add('cat-over')"
+      ondragleave="this.classList.remove('cat-over')"
+      ondrop="catDrop(${i},this)"
+      style="display:flex;align-items:center;padding:8px 6px;border-bottom:1px solid var(--border);gap:10px;cursor:grab;border-radius:4px">
+      <span style="color:var(--ink-3);font-size:13px">&#8597;</span>
+      <span style="flex:1;font-size:14px">${c}</span>
+      ${customCats.includes(c)
+        ? `<button onclick="deleteCat('${c}')" style="font-size:12px;color:var(--terra);background:none;border:none;cursor:pointer;font-family:inherit;padding:2px 6px">Remove</button>`
+        : `<span style="font-size:11px;color:var(--ink-3)">built-in</span>`}
+    </div>`).join('');
+}
+
+function catDrop(toIdx, el) {
+  el.classList.remove('cat-over');
+  if (catDragIdx === null || catDragIdx === toIdx) return;
+  const cats = allCats();
+  const moved = cats.splice(catDragIdx, 1)[0];
+  cats.splice(toIdx, 0, moved);
+  catOrder = cats; catDragIdx = null;
+  saveSettings(); renderCatList();
+}
+
+function addCategory() {
+  const inp = document.getElementById('new-cat-inp');
+  const v = inp.value.trim(); if (!v) return;
+  if (allCats().map(c => c.toLowerCase()).includes(v.toLowerCase())) { alert('That category already exists.'); return; }
+  customCats.push(v); catOrder = [...allCats()];
+  inp.value = ''; saveSettings(); renderCatList();
+}
+
+function deleteCat(cat) {
+  if (R.some(r => r.category === cat)) { alert('Cannot remove a category that has recipes assigned to it.'); return; }
+  customCats = customCats.filter(c => c !== cat);
+  catOrder = catOrder.filter(c => c !== cat);
+  saveSettings(); renderCatList();
+}
+
+// ── COOKING MODE ──────────────────────────────────────────────
+let cmRecipe = null, cmStep = 0, cmTimerSecs = 0, cmRunning = false, cmInterval = null;
+
+function extractTimerSecs(text) {
+  const m = text.match(/(\d+)\s*[-\u2013]?\s*(\d+)?\s*minutes?/i);
+  if (m) return parseInt(m[2] || m[1]) * 60;
+  const h = text.match(/(\d+)\s*hours?/i);
+  if (h) return parseInt(h[1]) * 3600;
+  return 0;
+}
+
+function startCookMode(id) {
+  const r = R.find(x => x.id === id); if (!r) return;
+  cmRecipe = r; cmStep = 0;
+  clearInterval(cmInterval); cmRunning = false;
+  document.getElementById('cook-mode').classList.remove('hide');
+  renderCookMode();
+}
+
+function closeCookMode() {
+  clearInterval(cmInterval); cmRunning = false; cmRecipe = null;
+  document.getElementById('cook-mode').classList.add('hide');
+}
+
+function renderCookMode() {
+  const r = cmRecipe;
+  const steps = r.instructions;
+  document.getElementById('cm-recipe-name').textContent = r.name;
+  document.getElementById('cm-step-label').textContent = `Step ${cmStep + 1} of ${steps.length}`;
+  document.getElementById('cm-step-text').textContent = steps[cmStep];
+  document.getElementById('cm-dots').innerHTML = steps.map((_, i) =>
+    `<div class="cm-dot${i === cmStep ? ' active' : i < cmStep ? ' done' : ''}"></div>`).join('');
+  document.getElementById('cm-prev-btn').disabled = cmStep === 0;
+  const nextBtn = document.getElementById('cm-next-btn');
+  if (cmStep === steps.length - 1) {
+    nextBtn.textContent = 'Done'; nextBtn.onclick = closeCookMode;
+  } else {
+    nextBtn.textContent = 'Next \u2192'; nextBtn.onclick = () => cmNav(1);
+  }
+  clearInterval(cmInterval); cmRunning = false;
+  const secs = extractTimerSecs(steps[cmStep]);
+  const timerEl = document.getElementById('cm-timer');
+  if (secs > 0) {
+    cmTimerSecs = secs; timerEl.classList.remove('hide');
+    updateTimerDisplay();
+    document.getElementById('cm-start-btn').textContent = 'Start';
+    document.getElementById('cm-timer-display').className = 'cook-mode-timer-time';
+  } else { timerEl.classList.add('hide'); }
+}
+
+function cmNav(dir) {
+  cmStep = Math.max(0, Math.min(cmRecipe.instructions.length - 1, cmStep + dir));
+  clearInterval(cmInterval); cmRunning = false; renderCookMode();
+}
+
+function toggleTimer() {
+  if (cmRunning) {
+    clearInterval(cmInterval); cmRunning = false;
+    document.getElementById('cm-start-btn').textContent = 'Resume';
+  } else {
+    if (cmTimerSecs <= 0) return;
+    cmRunning = true;
+    document.getElementById('cm-start-btn').textContent = 'Pause';
+    document.getElementById('cm-timer-display').className = 'cook-mode-timer-time running';
+    cmInterval = setInterval(() => {
+      cmTimerSecs--; updateTimerDisplay();
+      if (cmTimerSecs <= 0) {
+        clearInterval(cmInterval); cmRunning = false;
+        document.getElementById('cm-start-btn').textContent = 'Done';
+        document.getElementById('cm-timer-display').className = 'cook-mode-timer-time done';
+      }
+    }, 1000);
+  }
+}
+
+function resetTimer() {
+  clearInterval(cmInterval); cmRunning = false;
+  cmTimerSecs = extractTimerSecs(cmRecipe.instructions[cmStep]);
+  updateTimerDisplay();
+  document.getElementById('cm-start-btn').textContent = 'Start';
+  document.getElementById('cm-timer-display').className = 'cook-mode-timer-time';
+}
+
+function updateTimerDisplay() {
+  const m = Math.floor(cmTimerSecs / 60);
+  const s = cmTimerSecs % 60;
+  document.getElementById('cm-timer-display').textContent = `${m}:${s < 10 ? '0' : ''}${s}`;
+}
+
+// ── TABS ──────────────────────────────────────────────────────
+function switchTab(name, btn) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  btn.classList.add('active');
+  if (name === 'shopping') renderShopping();
+  if (name === 'cooking') renderCooking();
+}
+
+loadData();
+
+</script>
+</body>
+</html>
