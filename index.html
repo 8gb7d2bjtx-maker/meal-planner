@@ -1138,6 +1138,112 @@
     .cat-over {
         background: var(--sage-light) !important
     }
+
+    @media (max-width: 640px) {
+        /* Planning tab — show only the calendar, full width */
+        .planner {
+            grid-template-columns: 1fr;
+            height: auto;
+            overflow: visible
+        }
+
+        .browser {
+            display: none
+        }
+
+        .sidebar {
+            height: auto;
+            border-right: none;
+            border-bottom: 1px solid var(--border)
+        }/* Bigger, more readable day slots */
+
+        .day-slot {
+            min-height: auto;
+            padding: 10px 14px;
+            margin-bottom: 8px;
+            border-radius: 10px
+        }
+
+        .day-lbl {
+            font-size: 13px;
+            letter-spacing: .08em;
+            margin-bottom: 6px
+        }
+
+        .meal-chip {
+            font-size: 14px;
+            padding: 6px 10px;
+            border-radius: 6px;
+            margin-bottom: 5px
+        }
+
+        .meal-chip-name {
+            font-size: 14px
+        }
+
+        .chip-rm {
+            font-size: 18px
+        }/* Sidebar header */
+
+        .sidebar-head {
+            padding: 16px 16px 12px
+        }
+
+        .sidebar-title {
+            font-size: 18px
+        }/* Reset button */
+
+        .sidebar-foot {
+            padding: 12px 14px
+        }
+
+        .btn-reset {
+            padding: 10px;
+            font-size: 13px
+        }/* Nav — tighten up */
+
+        .app-nav {
+            padding: 0 14px
+        }
+
+        .app-logo {
+            font-size: 17px;
+            margin-right: 16px
+        }
+
+        .nav-tab {
+            font-size: 12px;
+            padding: 0 10px
+        }/* Shopping and cooking tabs — already decent, just a little breathing room */
+
+        .shop-wrap {
+            padding: 16px 14px
+        }
+
+        .cook-wrap {
+            padding: 16px 14px
+        }
+
+        .item-name {
+            font-size: 16px
+        }
+
+        .aisle-nm {
+            font-size: 12px
+        }/* Cook mode — full screen friendly */
+
+        .cook-mode-card {
+            padding: 24px 20px
+        }
+
+        .cook-mode-step-text {
+            font-size: 18px
+        }
+
+        .cook-mode-timer-time {
+            font-size: 30px
+        }
+    }
     </style>
 </head>
 <body>
