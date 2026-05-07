@@ -57,15 +57,6 @@
         z-index: 50
     }
 
-    .app-logo {
-        font-family: 'Cormorant Garamond', Georgia, serif;
-        font-size: 20px;
-        font-weight: 600;
-        color: #431f51;
-        margin-right: 28px;
-        letter-spacing: 0.02em
-    }
-
     .nav-tab {
         font-size: 13px;
         font-weight: 500;
@@ -1206,11 +1197,6 @@
             padding: 0 14px
         }
 
-        .app-logo {
-            font-size: 17px;
-            margin-right: 16px
-        }
-
         .nav-tab {
             font-size: 12px;
             padding: 0 10px
@@ -1248,11 +1234,11 @@
 </head>
 <body>
     <nav class="app-nav">
-        <span class="app-logo">Mise en Place</span>
         <button class="nav-tab active" onclick="switchTab('planning',this)">Meal Planning</button>
         <button class="nav-tab" onclick="switchTab('shopping',this)">Shopping</button>
         <button class="nav-tab" onclick="switchTab('cooking',this)">Cooking</button>
-        <span id="save-status" style="margin-left:auto;font-size:12px;color:var(--ink-3);padding-right:8px"></span>
+        <button onclick="location.reload()" title="Refresh" style="margin-left:auto;background:none;border:none;cursor:pointer;color:var(--ink-2);font-size:18px;padding:0 8px;line-height:1;opacity:.7" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=.7">&#8635;</button>
+        <span id="save-status" style="font-size:12px;color:var(--ink-3);padding-right:4px"></span>
     </nav>
     <div id="error-banner" style="display:none;background:#fdecea;color:#c0392b;padding:10px 20px;font-size:13px;border-bottom:1px solid #f5c6cb;"></div>
 
