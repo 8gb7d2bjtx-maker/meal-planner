@@ -568,7 +568,6 @@
     }
 
     .item-name {
-        flex: 1;
         font-size: 15px
     }
 
@@ -2480,27 +2479,268 @@
         return R.filter(r => ids.has(r.id));
     }
 
+    // ── QUANTITY PARSING ─────────────────────────────────────────
+    const UNITS = [// volume
+    'cups', 'cup', 'c',
+    'tablespoons', 'tablespoon', 'tbsp', 'tbs',
+    'teaspoons', 'teaspoon', 'tsp',
+    'fluid ounces', 'fluid ounce', 'fl oz',
+    'quarts', 'quart', 'qt',
+    'pints', 'pint', 'pt',
+    'gallons', 'gallon', 'gal',
+    'liters', 'liter', 'l', 'ml', 'milliliters', 'milliliter', // weight
+    'pounds', 'pound', 'lbs', 'lb',
+    'ounces', 'ounce', 'oz',
+    'grams', 'gram', 'g', 'kg', 'kilograms', 'kilogram', // count-ish
+    'cloves', 'clove',
+    'cans', 'can',
+    'packages', 'package', 'pkg',
+    'bags', 'bag',
+    'boxes', 'box',
+    'bunches', 'bunch',
+    'stalks', 'stalk',
+    'sprigs', 'sprig',
+    'heads', 'head',
+    'slices', 'slice',
+    'pieces', 'piece',
+    'jars', 'jar',
+    'bottles', 'bottle',
+    'sticks', 'stick',
+    'strips', 'strip',
+    'ears', 'ear',
+    ];
+    // Sort longest first so "tablespoons" matches before "spoons"
+    const UNITS_SORTED = [...UNITS].sort((a, b) => b.length - a.length);
+
+    function parseFraction(str) {
+        // Handles: 1/2, ½, ¼, ¾, ⅓, ⅔, ⅛, mixed like 1½, 2 1/2, 1-2 (range→avg)
+        str = str.trim();
+        const unicodeFracs = {
+            '½': 0.5,
+            '¼': 0.25,
+            '¾': 0.75,
+            '⅓': 1 / 3,
+            '⅔': 2 / 3,
+            '⅛': 0.125,
+            '⅜': 0.375,
+            '⅝': 0.625,
+            '⅞': 0.875,
+            '⅙': 1 / 6,
+            '⅚': 5 / 6
+        };
+        // Range like 2-3 or 2–3 → average
+        const rangeM = str.match(/^(\d+(?:\.\d+)?)\s*[-–]\s*(\d+(?:\.\d+)?)$/);
+        if (rangeM)
+            return (parseFloat(rangeM[1]) + parseFloat(rangeM[2])) / 2;
+        // Mixed number like 1½ or 1 1/2
+        const mixedM = str.match(/^(\d+)\s*([½¼¾⅓⅔⅛⅜⅝⅞⅙⅚]|(\d+)\/(\d+))$/);
+        if (mixedM) {
+            const whole = parseInt(mixedM[1]);
+            if (mixedM[2] in unicodeFracs)
+                return whole + unicodeFracs[mixedM[2]];
+            if (mixedM[3] && mixedM[4])
+                return whole + parseInt(mixedM[3]) / parseInt(mixedM[4]);
+        }
+        // Unicode fraction alone
+        if (str in unicodeFracs)
+            return unicodeFracs[str];
+        // Slash fraction
+        const slashM = str.match(/^(\d+)\/(\d+)$/);
+        if (slashM)
+            return parseInt(slashM[1]) / parseInt(slashM[2]);
+        // Plain number
+        const num = parseFloat(str);
+        if (!isNaN(num))
+            return num;
+        return null;
+    }
+
+    function formatQty(n) {
+        if (n === Math.floor(n))
+            return String(n);
+        const fracs = [[0.125, '⅛'], [0.25, '¼'], [0.333, '⅓'], [0.375, '⅜'], [0.5, '½'], [0.625, '⅝'], [0.667, '⅔'], [0.75, '¾'], [0.875, '⅞']];
+        const whole = Math.floor(n);
+        const frac = n - whole;
+        for (const [val, sym] of fracs) {
+            if (Math.abs(frac - val) < 0.04)
+                return (whole > 0 ? whole : '') + sym;
+        }
+        return n.toFixed(1).replace(/\.0$/, '');
+    }
+
+    function parseIngredient(ing) {
+        // Returns {qty: number|null, unit: string|null, name: string, original: string}
+        const original = ing;
+        let s = ing.trim();
+
+        // Try to extract leading quantity (number/fraction)
+        // Patterns: "2", "1/2", "½", "1½", "2-3", "2–3", "1 1/2", "about 2"
+        s = s.replace(/^about\s+/i, '').replace(/^approximately\s+/i, '');
+        const qtyPat = /^([\d½¼¾⅓⅔⅛⅜⅝⅞⅙⅚]+(?:[.,]\d+)?(?:\s*[-–]\s*[\d½¼¾⅓⅔⅛⅜⅝⅞⅙⅚]+(?:[.,]\d+)?)?(?:\s+\d+\/\d+)?|\d+\/\d+)/;
+        const qtyM = s.match(qtyPat);
+        let qty = null;
+        if (qtyM) {
+            qty = parseFraction(qtyM[0].trim());
+            s = s.slice(qtyM[0].length).trim();
+        }
+
+        // Try to extract unit
+        let unit = null;
+        for (const u of UNITS_SORTED) {
+            const uPat = new RegExp('^' + u + '(?:\\.|s)?\\b', 'i');
+            if (uPat.test(s)) {
+                unit = u.toLowerCase();
+                s = s.replace(uPat, '').trim();
+                // Normalize unit
+                if (['cups', 'c'].includes(unit))
+                    unit = 'cup';
+                if (['tablespoons', 'tbs', 'tbsp'].includes(unit))
+                    unit = 'tbsp';
+                if (['teaspoons'].includes(unit))
+                    unit = 'tsp';
+                if (['pounds', 'lbs'].includes(unit))
+                    unit = 'lb';
+                if (['ounces'].includes(unit))
+                    unit = 'oz';
+                if (['cloves'].includes(unit))
+                    unit = 'clove';
+                if (['cans'].includes(unit))
+                    unit = 'can';
+                if (['packages', 'pkg'].includes(unit))
+                    unit = 'package';
+                if (['stalks'].includes(unit))
+                    unit = 'stalk';
+                if (['sprigs'].includes(unit))
+                    unit = 'sprig';
+                if (['bags'].includes(unit))
+                    unit = 'bag';
+                if (['boxes'].includes(unit))
+                    unit = 'box';
+                if (['bunches'].includes(unit))
+                    unit = 'bunch';
+                if (['heads'].includes(unit))
+                    unit = 'head';
+                if (['sticks'].includes(unit))
+                    unit = 'stick';
+                if (['jars'].includes(unit))
+                    unit = 'jar';
+                break;
+            }
+        }
+
+        // Clean up name: remove leading comma/dash, lowercase for matching
+        s = s.replace(/^[,\-–]\s*/, '').trim();
+        const name = s.toLowerCase();
+
+        return {
+            qty,
+            unit,
+            name,
+            original
+        };
+    }
+
+    function formatDisplay(qty, unit, originalName) {
+        if (qty === null)
+            return originalName;
+        const qStr = formatQty(qty);
+        if (!unit)
+            return `${qStr} ${originalName}`;
+        // Pluralize unit if qty > 1
+        let u = unit;
+        if (qty > 1) {
+            const plurals = {
+                cup: 'cups',
+                tbsp: 'tbsp',
+                tsp: 'tsp',
+                lb: 'lbs',
+                oz: 'oz',
+                clove: 'cloves',
+                can: 'cans',
+                package: 'packages',
+                stalk: 'stalks',
+                sprig: 'sprigs',
+                bag: 'bags',
+                box: 'boxes',
+                bunch: 'bunches',
+                head: 'heads',
+                stick: 'sticks',
+                jar: 'jars'
+            };
+            u = plurals[unit] || unit;
+        }
+        return `${qStr} ${u} ${originalName}`;
+    }
+
     function buildShopMap() {
         const map = {};
         getPlannedRecipes().forEach(r => {
             r.ingredients.forEach(ing => {
-                const key = ing.toLowerCase().replace(/[^a-z\s]/g, '').trim();
-                let bestKey = key;
-                for (const k of Object.keys(AISLE_MAP)) {
-                    if (key.includes(k)) {
-                        bestKey = k;
-                        break;
-                    }
-                }
-                if (!map[bestKey])
-                    map[bestKey] = {
-                        display: ing,
-                        count: 0
+                const parsed = parseIngredient(ing);
+
+                // Group key = exact normalized ingredient name only
+                // This ensures "ground chicken" and "shredded chicken" stay separate
+                const groupKey = parsed.name.toLowerCase().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, ' ').trim();
+
+                if (!map[groupKey]) {
+                    map[groupKey] = {
+                        name: parsed.name,
+                        entries: [],
+                        recipes: [],
+                        aisle: getAisle(ing),
                     };
-                map[bestKey].count++;
+                }
+                map[groupKey].entries.push({
+                    qty: parsed.qty,
+                    unit: parsed.unit,
+                    original: ing
+                });
+                if (!map[groupKey].recipes.includes(r.name))
+                    map[groupKey].recipes.push(r.name);
             });
         });
-        return map;
+
+        // Consolidate quantities for each exact-match group
+        const result = {};
+        for (const [key, val] of Object.entries(map)) {
+            const entries = val.entries;
+            const byUnit = {};
+            const unparseable = [];
+
+            entries.forEach(e => {
+                if (e.qty !== null && e.unit) {
+                    if (!byUnit[e.unit])
+                        byUnit[e.unit] = 0;
+                    byUnit[e.unit] += e.qty;
+                } else if (e.qty !== null && !e.unit) {
+                    if (!byUnit['__count__'])
+                        byUnit['__count__'] = 0;
+                    byUnit['__count__'] += e.qty;
+                } else {
+                    // No quantity found — keep original string
+                    unparseable.push(e.original);
+                }
+            });
+
+            const parts = [];
+            for (const [unit, total] of Object.entries(byUnit)) {
+                if (unit === '__count__') {
+                    parts.push(formatQty(total) + ' ' + val.name);
+                } else {
+                    parts.push(formatDisplay(total, unit, val.name));
+                }
+            }
+            // Deduplicate unparseable originals before adding
+            [...new Set(unparseable)].forEach(o => parts.push(o));
+
+            result[key] = {
+                display: parts.join(' + '),
+                count: entries.length,
+                recipes: val.recipes,
+                aisle: val.aisle,
+            };
+        }
+        return result;
     }
 
     function renderShopping() {
@@ -2510,27 +2750,35 @@
             key: k,
             display: v.display,
             count: v.count,
-            aisle: getAisle(v.display)
+            aisle: v.aisle || getAisle(v.display),
+            recipes: v.recipes || []
         }));
         const man = manuals.map(m => ({
             key: 'm_' + m.id,
             display: m.name,
             count: 1,
             aisle: getAisle(m.name),
-            mid: m.id
+            mid: m.id,
+            recipes: []
         }));
         const all = [...items, ...man];
         if (!all.length) {
             el.innerHTML = '<div class="empty">Add recipes to your meal plan to generate a shopping list.</div>';
             return;
         }
+
+        // Split into unchecked (grouped by aisle) and checked (flat list at bottom)
+        const unchecked = all.filter(x => !checked[x.key]);
+        const checkedItems = all.filter(x => !!checked[x.key]);
+
         const byAisle = {};
-        all.forEach(x => {
+        unchecked.forEach(x => {
             if (!byAisle[x.aisle])
                 byAisle[x.aisle] = [];
             byAisle[x.aisle].push(x);
         });
-        el.innerHTML = Object.keys(byAisle).sort().map(aisle => {
+
+        const aisleHTML = Object.keys(byAisle).sort().map(aisle => {
             const its = byAisle[aisle];
             return `<div class="aisle-sec">
       <div class="aisle-hd" onclick="toggleAisle(this)">
@@ -2543,18 +2791,55 @@
         ${
 
 
-            its.map(item => {const ck = checked[item.key];return `<div class="shop-item${ck ? ' done' : ''}">
-            <div class="chk${ck ? ' on' : ''}" onclick="toggleChk('${item.key}',this,event)">${ck ? '&#10003;' : ''}</div>
-            <span class="item-name">${item.display}</span>
-            ${item.count > 1 ? `<span class="item-qty">&#215;${item.count}</span>` : ''}
-            <button class="aisle-edit-btn" onclick="chgAisle(this.dataset.d,this.dataset.a)" data-d="${item.display.replace(/"/g, '&quot;')}" data-a="${aisle}">&#8635; aisle</button>
-            ${item.mid !== undefined ? `<button class="aisle-edit-btn" style="color:var(--terra)" onclick="deleteManual('${item.mid}')">&#10005;</button>` : ''}
-          </div>`;}).join('')}
+            its.map(item => renderShopItem(item)).join('')}
       </div>
     </div>`
 
             ;
         }).join('');
+
+        const checkedHTML = checkedItems.length ? `
+    <div class="aisle-sec" style="margin-top:16px">
+      <div class="aisle-hd" onclick="toggleAisle(this)">
+        <span class="aisle-nm" style="color:var(--ink-3)">Already have it</span>
+        <span class="aisle-cnt">${
+
+
+        checkedItems.length} item${checkedItems.length !== 1 ? 's' : ''}</span>
+        <span class="aisle-chev open">&#9654;</span>
+      </div>
+      <div class="aisle-items">
+        ${
+
+
+        checkedItems.map(item => renderShopItem(item)).join('')}
+      </div>
+    </div>`
+
+        : '';
+
+        el.innerHTML = aisleHTML + checkedHTML;
+    }
+
+    function renderShopItem(item) {
+        const ck = checked[item.key];
+        const aisle = item.aisle;
+        const recipeHint = item.recipes && item.recipes.length
+        ? `<div style="font-size:11px;color:var(--ink-3);margin-top:2px;line-height:1.3">${item.recipes.join(', ')}</div>`
+        : '';
+        return `<div class="shop-item${ck ? ' done' : ''}">
+    <div class="chk${ck ? ' on' : ''}" onclick="toggleChk('${item.key}',this,event)">${ck ? '&#10003;' : ''}</div>
+    <div style="flex:1;min-width:0">
+      <div class="item-name">${
+        item.display}</div>
+      ${recipeHint}
+    </div>
+    ${
+        item.count > 1 ? '' : ''}
+    <button class="aisle-edit-btn" onclick="chgAisle(this.dataset.d,this.dataset.a)" data-d="${item.display.replace(/"/g, '&quot;')}" data-a="${aisle}">&#8635; aisle</button>
+    ${item.mid !== undefined ? `<button class="aisle-edit-btn" style="color:var(--terra)" onclick="deleteManual('${item.mid}')">&#10005;</button>` : ''}
+  </div>`
+        ;
     }
 
     function toggleAisle(hd) {
@@ -2568,11 +2853,8 @@
     function toggleChk(key, el, e) {
         e.stopPropagation();
         checked[key] = !checked[key];
-        const item = el.closest('.shop-item');
-        el.classList.toggle('on', !!checked[key]);
-        el.innerHTML = checked[key] ? '&#10003;' : '';
-        item.classList.toggle('done', !!checked[key]);
         saveSettings();
+        renderShopping();
     }
 
     function clearChecked() {
