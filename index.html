@@ -100,8 +100,8 @@
     }
 
     .sidebar {
-        background: var(--white);
-        border-right: 1px solid var(--border);
+        background: #323031;
+        border-right: 1px solid #444;
         display: flex;
         flex-direction: column;
         overflow: hidden;
@@ -116,13 +116,13 @@
         font-family: 'Cormorant Garamond', Georgia, serif;
         font-size: 22px;
         font-weight: 600;
-        color: var(--ink);
+        color: #fff;
         margin-bottom: 2px
     }
 
     .sidebar-sub {
         font-size: 11px;
-        color: var(--ink-2);
+        color: rgba(255, 255, 255, .5);
         text-transform: uppercase;
         letter-spacing: .05em
     }
@@ -134,7 +134,7 @@
     }
 
     .day-slot {
-        border: 1.5px dashed var(--border);
+        border: 1.5px dashed rgba(255, 255, 255, .3);
         border-radius: 8px;
         padding: 10px 12px;
         margin-bottom: 8px;
@@ -143,22 +143,44 @@
     }
 
     .day-slot.over {
-        border-color: var(--sage);
-        background: var(--sage-light)
+        border-color: rgba(255, 255, 255, .8);
+        background: rgba(255, 255, 255, .08)
     }
 
     .day-lbl {
         font-size: 12px;
         font-weight: 600;
-        color: var(--ink-2);
+        color: rgba(255, 255, 255, .7);
         text-transform: uppercase;
         letter-spacing: .06em;
-        margin-bottom: 6px
+        margin-bottom: 6px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between
+    }
+
+    .day-lbl-star {
+        background: none;
+        border: none;
+        cursor: pointer;
+        color: rgba(255, 255, 255, .25);
+        font-size: 13px;
+        padding: 0;
+        line-height: 1;
+        transition: color .15s
+    }
+
+    .day-lbl-star:hover {
+        color: rgba(255, 255, 255, .8)
+    }
+
+    .day-lbl-star.active {
+        color: #f5c842
     }
 
     .meal-chip {
-        background: var(--sage-light);
-        color: #431f51;
+        background: rgba(255, 255, 255, .12);
+        color: #fff;
         font-size: 13px;
         font-weight: 500;
         padding: 5px 9px;
@@ -179,7 +201,7 @@
     .chip-rm {
         background: none;
         border: none;
-        color: var(--sage);
+        color: rgba(255, 255, 255, .5);
         cursor: pointer;
         font-size: 16px;
         line-height: 1;
@@ -193,26 +215,25 @@
 
     .sidebar-foot {
         padding: 10px 12px;
-        border-top: 1px solid var(--border)
+        border-top: 1px solid rgba(255, 255, 255, .1)
     }
 
     .btn-reset {
         width: 100%;
         padding: 7px;
         background: none;
-        border: 1px solid var(--border-2);
+        border: 1px solid rgba(255, 255, 255, .2);
         border-radius: 6px;
         font-size: 12px;
-        color: var(--ink-2);
+        color: rgba(255, 255, 255, .5);
         cursor: pointer;
         transition: all .15s;
         font-family: inherit
     }
 
     .btn-reset:hover {
-        border-color: var(--terra);
-        color: var(--terra);
-        background: var(--terra-light)
+        border-color: rgba(255, 255, 255, .6);
+        color: #fff
     }
 
     .browser {
@@ -1104,7 +1125,7 @@
         .sidebar {
             height: auto;
             border-right: none;
-            border-bottom: 1px solid var(--border)
+            border-bottom: 1px solid rgba(255, 255, 255, .1)
         }
 
         .day-slot {
@@ -1575,6 +1596,7 @@
         catOrder = [];
     let itemOverrides = {};
     let pastManuals = [];
+    let startDay = 'Monday';
     let editId = null,
         curViewId = null,
         dragId = null,
@@ -1649,6 +1671,7 @@
                 catOrder = s.catOrder || [];
                 itemOverrides = s.itemOverrides || {};
                 pastManuals = s.pastManuals || [];
+                startDay = s.startDay || 'Monday';
             }
             showStatus('');
         } catch (e) {
@@ -1670,7 +1693,8 @@
                     customCats,
                     catOrder,
                     itemOverrides,
-                    pastManuals
+                    pastManuals,
+                    startDay
                 });
             } catch (e) {
                 console.error('Save error:', e);
@@ -1720,8 +1744,20 @@
         cats.map(c => `<option value="${c}"${c === cur ? ' selected' : ''}>${c}</option>`).join('');
     }
 
+    function getOrderedDays() {
+        const idx = DAYS.indexOf(startDay);
+        return [...DAYS.slice(idx), ...DAYS.slice(0, idx)];
+    }
+
+    function setStartDay(day) {
+        startDay = day;
+        saveSettings();
+        renderCal();
+    }
+
     function renderCal() {
-        document.getElementById('cal-days').innerHTML = DAYS.map(d => {
+        const orderedDays = getOrderedDays();
+        document.getElementById('cal-days').innerHTML = orderedDays.map(d => {
             const meals = plan[d] || [];
             const chips = meals.map((id, i) => {
                 const r = R.find(x => x.id === id);
@@ -1733,13 +1769,20 @@
                 </div>`
                 ;
             }).join('');
+            const isStart = d === startDay;
             return `<div class="day-slot" id="ds-${d}"
                 ondragover="event.preventDefault();this.classList.add('over')"
                 ondragleave="this.classList.remove('over')"
                 ondrop="onDrop('${
 
             d}',event)">
-                <div class="day-lbl">${d}</div>${chips}
+                <div class="day-lbl">
+                    <span>${
+            d}</span>
+                    <button class="day-lbl-star${isStart ? ' active' : ''}" onclick="setStartDay('${d}')" title="Start week on ${d}">&#9733;</button>
+                </div>
+                ${
+            chips}
             </div>`
             ;
         }).join('');
@@ -2391,7 +2434,7 @@
             el.innerHTML = '<div class="empty">Add recipes to your meal plan to see cooking instructions here.</div>';
             return;
         }
-        el.innerHTML = DAYS.map(d => {
+        el.innerHTML = getOrderedDays().map(d => {
             const meals = (plan[d] || []).map(id => R.find(r => r.id === id)).filter(Boolean);
             if (!meals.length)
                 return '';
