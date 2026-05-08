@@ -3093,6 +3093,12 @@
     function selectAutocomplete(name) {
         document.getElementById('add-inp').value = name;
         document.getElementById('autocomplete-list').innerHTML = '';
+        // Restore the saved aisle override for this item
+        const past = pastManuals.find(p => p.name.toLowerCase() === name.toLowerCase());
+        if (past?.aisle) {
+            const key = name.toLowerCase().replace(/[^a-z\s]/g, '').trim();
+            aisleOv[key] = past.aisle;
+        }
     }
 
     // ── SHOP ITEM EDIT MODAL ──────────────────────────────────────
