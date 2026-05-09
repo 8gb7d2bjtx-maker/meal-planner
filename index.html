@@ -183,6 +183,53 @@
         color: #fff
     }
 
+    .day-lbl-edit {
+        background: none;
+        border: none;
+        cursor: pointer;
+        color: rgba(255, 255, 255, .2);
+        font-size: 11px;
+        padding: 0;
+        line-height: 1;
+        margin-left: auto;
+        transition: color .15s
+    }
+
+    .day-lbl-edit:hover {
+        color: rgba(255, 255, 255, .7)
+    }
+
+    .day-note {
+        font-size: 11px;
+        font-style: italic;
+        color: rgba(255, 255, 255, .45);
+        margin-bottom: 6px;
+        line-height: 1.4;
+        padding-left: 2px
+    }
+
+    .day-note-input {
+        width: 100%;
+        background: rgba(255, 255, 255, .08);
+        border: 1px solid rgba(255, 255, 255, .2);
+        border-radius: 5px;
+        color: #fff;
+        font-size: 12px;
+        font-family: inherit;
+        font-style: italic;
+        padding: 5px 8px;
+        outline: none;
+        margin-bottom: 6px
+    }
+
+    .day-note-input::placeholder {
+        color: rgba(255, 255, 255, .3)
+    }
+
+    .day-note-input:focus {
+        border-color: rgba(255, 255, 255, .45)
+    }
+
     .meal-chip {
         background: #431f51;
         color: #fff;
@@ -1622,6 +1669,7 @@
     let itemOverrides = {};
     let pastManuals = [];
     let startDay = 'Monday';
+    let dayNotes = {};
     let editId = null,
         curViewId = null,
         dragId = null,
@@ -1697,6 +1745,7 @@
                 itemOverrides = s.itemOverrides || {};
                 pastManuals = s.pastManuals || [];
                 startDay = s.startDay || 'Monday';
+                dayNotes = s.dayNotes || {};
             }
             showStatus('');
         } catch (e) {
@@ -1719,7 +1768,8 @@
                     catOrder,
                     itemOverrides,
                     pastManuals,
-                    startDay
+                    startDay,
+                    dayNotes
                 });
             } catch (e) {
                 console.error('Save error:', e);
@@ -1780,6 +1830,37 @@
         renderCal();
     }
 
+    function toggleDayNote(day) {
+        const input = document.getElementById('note-input-' + day);
+        const display = document.getElementById('note-display-' + day);
+        if (input.style.display === 'none') {
+            display.style.display = 'none';
+            input.style.display = 'block';
+            input.focus();
+            input.select();
+        } else {
+            saveDayNote(day);
+        }
+    }
+
+    function saveDayNote(day) {
+        const input = document.getElementById('note-input-' + day);
+        const display = document.getElementById('note-display-' + day);
+        if (!input)
+            return;
+        const val = input.value.trim();
+        if (val) {
+            dayNotes[day] = val;
+            display.textContent = val;
+            display.style.display = '';
+        } else {
+            delete dayNotes[day];
+            display.style.display = 'none';
+        }
+        input.style.display = 'none';
+        saveSettings();
+    }
+
     function renderCal() {
         const orderedDays = getOrderedDays();
         document.getElementById('cal-days').innerHTML = orderedDays.map(d => {
@@ -1795,6 +1876,7 @@
                 ;
             }).join('');
             const isStart = d === startDay;
+            const note = dayNotes[d] || '';
             return `<div class="day-slot" id="ds-${d}"
                 ondragover="event.preventDefault();this.classList.add('over')"
                 ondragleave="this.classList.remove('over')"
@@ -1805,7 +1887,16 @@
                     <button class="day-lbl-star${
             isStart ? ' active' : ''}" onclick="setStartDay('${d}')" title="Start week on ${d}">&#9733;</button>
                     <span>${d}</span>
+                    <button class="day-lbl-edit" onclick="toggleDayNote('${d}')" title="Add note">&#9998;</button>
                 </div>
+                <div id="note-display-${
+            d}" class="day-note" style="${note ? '' : 'display:none'}">${note}</div>
+                <input id="note-input-${d}" class="day-note-input" type="text" placeholder="e.g. birthday dinner out..."
+                    style="display:none"
+                    value="${
+            note.replace(/"/g, '&quot;')}"
+                    onblur="saveDayNote('${d}')"
+                    onkeydown="if(event.key==='Enter'||event.key==='Escape')this.blur()">
                 ${
             chips}
             </div>`
@@ -2016,6 +2107,7 @@
         plan = {};
         checked = {};
         itemOverrides = {};
+        dayNotes = {};
         saveSettings();
         renderAll();
     }
