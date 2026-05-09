@@ -945,6 +945,13 @@
 
     .cat-over {
         background: var(--sage-light) !important
+    }
+
+    .drag-placeholder {
+        background: var(--sage-light);
+        border: 2px dashed #431f51;
+        border-radius: 6px;
+        pointer-events: none;
     }/* Touch drag ghost */
 
     .touch-ghost {
@@ -2628,19 +2635,38 @@
             renderAisleEditList();
     }
 
+    let aisleDragIdx = null;
+    let aislePlaceholder = null;
+
     function renderAisleEditList() {
         const defaultAisles = ['Produce', 'Meat & Seafood', 'Dairy', 'Pantry', 'Canned Goods', 'Deli & Sausage', 'Spices & Seasonings', 'Frozen', 'Bakery', 'Other'];
-        document.getElementById('aisle-edit-list').innerHTML = AISLES.map((a, i) => {
+        const container = document.getElementById('aisle-edit-list');
+        container.innerHTML = AISLES.map((a, i) => {
             const isDefault = defaultAisles.includes(a);
-            return `<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border)">
-                <input class="fi" style="flex:1;padding:5px 8px;font-size:13px" value="${a.replace(/"/g, '&quot;')}"
+            return `<div class="reorder-row" data-idx="${i}" draggable="true"
+                style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border);cursor:grab;transition:transform .15s">
+                <span style="color:var(--ink-3);font-size:13px;cursor:grab;flex-shrink:0">&#8597;</span>
+                <input class="fi" style="flex:1;padding:5px 8px;font-size:13px" value="${
+
+            a.replace(/"/g, '&quot;')}"
                     onblur="renameAisle(${i}, this.value)"
                     onkeydown="if(event.key==='Enter')this.blur()">
                 ${
-            isDefault ? `<span style="font-size:11px;color:var(--ink-3);white-space:nowrap">built-in</span>` : `<button onclick="deleteAisle(${i})" style="background:none;border:none;cursor:pointer;color:var(--terra);font-size:16px;padding:0;line-height:1" title="Remove">&#10005;</button>`}
+            isDefault ? `<span style="font-size:11px;color:var(--ink-3);white-space:nowrap;flex-shrink:0">built-in</span>` : `<button onclick="deleteAisle(${i})" style="background:none;border:none;cursor:pointer;color:var(--terra);font-size:16px;padding:0;line-height:1;flex-shrink:0" title="Remove">&#10005;</button>`}
             </div>`
             ;
         }).join('');
+        initReorderDrag(container, 'aisle');
+    }
+
+    function aisleDrop(toIdx) {
+        if (aisleDragIdx === null || aisleDragIdx === toIdx)
+            return;
+        const moved = AISLES.splice(aisleDragIdx, 1)[0];
+        AISLES.splice(toIdx, 0, moved);
+        aisleDragIdx = null;
+        saveSettings();
+        renderAisleEditList();
     }
 
     function renameAisle(idx, newName) {
@@ -2886,6 +2912,90 @@
         renderAll();
     }
 
+    // ── SHARED REORDER DRAG ───────────────────────────────────────
+    // Used by both aisle and category lists to show a placeholder while dragging
+    function initReorderDrag(container, type) {
+        let dragIdx = null;
+        let placeholder = null;
+        let rows = () => [...container.querySelectorAll('.reorder-row')];
+
+        container.addEventListener('dragstart', e => {
+            const row = e.target.closest('.reorder-row');
+            if (!row)
+                return;
+            dragIdx = parseInt(row.dataset.idx);
+            if (type === 'aisle')
+                aisleDragIdx = dragIdx;
+            if (type === 'cat')
+                catDragIdx = dragIdx;
+            row.style.opacity = '0.35';
+            // Create placeholder matching row height
+            placeholder = document.createElement('div');
+            placeholder.className = 'drag-placeholder';
+            placeholder.style.height = row.offsetHeight + 'px';
+            e.dataTransfer.effectAllowed = 'move';
+        });
+
+        container.addEventListener('dragover', e => {
+            e.preventDefault();
+            if (dragIdx === null || !placeholder)
+                return;
+            const row = e.target.closest('.reorder-row');
+            if (!row || parseInt(row.dataset.idx) === dragIdx)
+                return;
+            // Decide if cursor is in top or bottom half of target row
+            const rect = row.getBoundingClientRect();
+            const midY = rect.top + rect.height / 2;
+            if (e.clientY < midY) {
+                container.insertBefore(placeholder, row);
+            } else {
+                container.insertBefore(placeholder, row.nextSibling);
+            }
+        });
+
+        container.addEventListener('dragend', e => {
+            const row = e.target.closest('.reorder-row');
+            if (row)
+                row.style.opacity = '1';
+            if (!placeholder)
+                return;
+            // Find where placeholder landed
+            const allRows = rows();
+            const phIdx = [...container.children].indexOf(placeholder);
+            placeholder.remove();
+            placeholder = null;
+            if (phIdx === -1 || dragIdx === null) {
+                dragIdx = null;
+                return;
+            }
+            // Calculate real target index accounting for removed drag item
+            let toIdx = [...container.children].filter(el => el.classList.contains('reorder-row'))
+            .length; // fallback
+            // Re-query after placeholder removed
+            const remaining = [...container.querySelectorAll('.reorder-row')];
+            // Find the row that will end up at phIdx position
+            // Easier: count reorder-row children before phIdx in container children at time of removal
+            // Actually just rerender from phIdx relative to original
+            // Simpler approach: phIdx in container children (no placeholder now) among reorder-rows
+            const containerChildren = [...container.children];
+            // placeholder is removed; phIdx was its position before removal
+            // Count reorder-rows before phIdx to get toIdx
+            toIdx = containerChildren.slice(0, phIdx).filter(el => el.classList.contains('reorder-row')).length;
+            dragIdx = null;
+            if (type === 'aisle')
+                aisleDrop(toIdx);
+            if (type === 'cat')
+                catDrop(toIdx);
+        });
+
+        container.addEventListener('dragleave', e => {
+            if (!container.contains(e.relatedTarget) && placeholder) {
+                placeholder.remove();
+                placeholder = null;
+            }
+        });
+    }
+
     // ── CATEGORIES ────────────────────────────────────────────────
     let catDragIdx = null;
 
@@ -2897,15 +3007,9 @@
 
     function renderCatList() {
         const cats = allCats();
-        document.getElementById('cat-list').innerHTML = cats.map((c, i) => `
-            <div class="cat-row" draggable="true"
-                ondragstart="catDragIdx=${
-        i}"
-                ondragover="event.preventDefault();this.classList.add('cat-over')"
-                ondragleave="this.classList.remove('cat-over')"
-                ondrop="catDrop(${
-
-        i},this)"
+        const container = document.getElementById('cat-list');
+        container.innerHTML = cats.map((c, i) => `
+            <div class="reorder-row" data-idx="${i}" draggable="true"
                 style="display:flex;align-items:center;padding:8px 6px;border-bottom:1px solid var(--border);gap:10px;cursor:grab;border-radius:4px">
                 <span style="color:var(--ink-3);font-size:13px">&#8597;</span>
                 <span style="flex:1;font-size:14px">${
@@ -2914,10 +3018,10 @@
                 ${customCats.includes(c) ? `<button onclick="deleteCat('${c}')" style="font-size:12px;color:var(--terra);background:none;border:none;cursor:pointer;font-family:inherit;padding:2px 6px">Remove</button>` : `<span style="font-size:11px;color:var(--ink-3)">built-in</span>`}
             </div>`
         ).join('');
+        initReorderDrag(container, 'cat');
     }
 
-    function catDrop(toIdx, el) {
-        el.classList.remove('cat-over');
+    function catDrop(toIdx) {
         if (catDragIdx === null || catDragIdx === toIdx)
             return;
         const cats = allCats();
