@@ -2552,12 +2552,14 @@
 
         // Save aisle override
         if (newAisle !== item.aisle) {
-            const key = newDisplay.toLowerCase().replace(/[^a-z\s]/g, '').trim();
-            aisleOv[key] = newAisle;
+            // Key must match what getAisle() uses: stripped lowercase ingredient name
+            const aisleKey = (item.ingredientName || newDisplay).toLowerCase().replace(/[^a-z\s]/g, '').trim();
+            aisleOv[aisleKey] = newAisle;
             // Also update pastManuals so future autocomplete uses correct aisle
             const pm = pastManuals.find(p => p.name.toLowerCase() === newDisplay.toLowerCase());
             if (pm)
                 pm.aisle = newAisle;
+            saveSettings();
         }
 
         if (newDisplay !== origDisplay) {
