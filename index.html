@@ -1405,8 +1405,22 @@
         <div class="modal">
             <button class="m-close" onclick="closeOv('ov-aisle');renderShopping()">&#10005;</button>
             <div class="modal-title">Manage Aisles</div>
-            <p style="font-size:13px;color:var(--ink-2);margin-bottom:14px">Reassign ingredients to match your store's layout.</p>
-            <div id="aisle-list" style="max-height:340px;overflow-y:auto"></div>
+            <div style="display:flex;gap:0;margin-bottom:16px;border-bottom:2px solid var(--border)">
+                <button id="aisle-tab-assign" onclick="switchAisleTab('assign')" style="font-size:13px;font-weight:500;background:none;border:none;cursor:pointer;padding:6px 14px 8px;border-bottom:2px solid #431f51;margin-bottom:-2px;color:#431f51;font-family:inherit">Reassign</button>
+                <button id="aisle-tab-edit" onclick="switchAisleTab('edit')" style="font-size:13px;font-weight:500;background:none;border:none;cursor:pointer;padding:6px 14px 8px;border-bottom:2px solid transparent;margin-bottom:-2px;color:var(--ink-2);font-family:inherit">Edit Aisles</button>
+            </div>
+            <div id="aisle-panel-assign">
+                <p style="font-size:13px;color:var(--ink-2);margin-bottom:14px">Reassign ingredients to match your store's layout.</p>
+                <div id="aisle-list" style="max-height:300px;overflow-y:auto"></div>
+            </div>
+            <div id="aisle-panel-edit" style="display:none">
+                <p style="font-size:13px;color:var(--ink-2);margin-bottom:14px">Rename or remove aisles. Add new ones to match your store.</p>
+                <div id="aisle-edit-list" style="max-height:240px;overflow-y:auto;margin-bottom:14px"></div>
+                <div style="display:flex;gap:8px">
+                    <input class="fi" id="new-aisle-inp" placeholder="New aisle name..." onkeydown="if(event.key==='Enter')addAisle()">
+                    <button class="btn-save" onclick="addAisle()">Add</button>
+                </div>
+            </div>
             <div class="m-acts">
                 <button class="btn-save" onclick="closeOv('ov-aisle');renderShopping()">Done</button>
             </div>
@@ -1490,7 +1504,7 @@
     // ── CONSTANTS ────────────────────────────────────────────────
     const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
     const BASE_CATS = ['Chicken', 'Beef', 'Pork', 'Seafood', 'Breakfast', 'Soup', 'Salads', 'Sides', 'Vegetarian', 'Desserts', 'Bowls', 'No-Brainer / Freezer'];
-    const AISLES = ['Produce', 'Meat & Seafood', 'Dairy', 'Pantry', 'Canned Goods', 'Deli & Sausage', 'Spices & Seasonings', 'Frozen', 'Bakery', 'Other'];
+    let AISLES = ['Produce', 'Meat & Seafood', 'Dairy', 'Pantry', 'Canned Goods', 'Deli & Sausage', 'Spices & Seasonings', 'Frozen', 'Bakery', 'Other'];
     const AISLE_MAP = {
         'salmon': 'Meat & Seafood',
         'shrimp': 'Meat & Seafood',
@@ -1746,6 +1760,8 @@
                 pastManuals = s.pastManuals || [];
                 startDay = s.startDay || 'Monday';
                 dayNotes = s.dayNotes || {};
+                if (s.aisles && s.aisles.length)
+                    AISLES = s.aisles;
             }
             showStatus('');
         } catch (e) {
@@ -1769,7 +1785,8 @@
                     itemOverrides,
                     pastManuals,
                     startDay,
-                    dayNotes
+                    dayNotes,
+                    aisles: AISLES
                 });
             } catch (e) {
                 console.error('Save error:', e);
@@ -2596,7 +2613,83 @@
         renderShopping();
     }
 
+    function switchAisleTab(tab) {
+        document.getElementById('aisle-panel-assign').style.display = tab === 'assign' ? '' : 'none';
+        document.getElementById('aisle-panel-edit').style.display = tab === 'edit' ? '' : 'none';
+        const btnAssign = document.getElementById('aisle-tab-assign');
+        const btnEdit = document.getElementById('aisle-tab-edit');
+        btnAssign.style.borderBottomColor = tab === 'assign' ? '#431f51' : 'transparent';
+        btnAssign.style.color = tab === 'assign' ? '#431f51' : 'var(--ink-2)';
+        btnEdit.style.borderBottomColor = tab === 'edit' ? '#431f51' : 'transparent';
+        btnEdit.style.color = tab === 'edit' ? '#431f51' : 'var(--ink-2)';
+        if (tab === 'edit')
+            renderAisleEditList();
+    }
+
+    function renderAisleEditList() {
+        const defaultAisles = ['Produce', 'Meat & Seafood', 'Dairy', 'Pantry', 'Canned Goods', 'Deli & Sausage', 'Spices & Seasonings', 'Frozen', 'Bakery', 'Other'];
+        document.getElementById('aisle-edit-list').innerHTML = AISLES.map((a, i) => {
+            const isDefault = defaultAisles.includes(a);
+            return `<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border)">
+                <input class="fi" style="flex:1;padding:5px 8px;font-size:13px" value="${a.replace(/"/g, '&quot;')}"
+                    onblur="renameAisle(${i}, this.value)"
+                    onkeydown="if(event.key==='Enter')this.blur()">
+                ${
+            isDefault ? `<span style="font-size:11px;color:var(--ink-3);white-space:nowrap">built-in</span>` : `<button onclick="deleteAisle(${i})" style="background:none;border:none;cursor:pointer;color:var(--terra);font-size:16px;padding:0;line-height:1" title="Remove">&#10005;</button>`}
+            </div>`
+            ;
+        }).join('');
+    }
+
+    function renameAisle(idx, newName) {
+        newName = newName.trim();
+        if (!newName || newName === AISLES[idx])
+            return;
+        if (AISLES.some((a, i) => a.toLowerCase() === newName.toLowerCase() && i !== idx)) {
+            alert('An aisle with that name already exists.');
+            renderAisleEditList();
+            return;
+        }
+        const oldName = AISLES[idx];
+        AISLES[idx] = newName;
+        // Update any aisleOv entries pointing to old name
+        for (const k of Object.keys(aisleOv)) {
+            if (aisleOv[k] === oldName)
+                aisleOv[k] = newName;
+        }
+        saveSettings();
+        renderAisleEditList();
+    }
+
+    function deleteAisle(idx) {
+        const name = AISLES[idx];
+        // Move any items assigned to this aisle to 'Other'
+        for (const k of Object.keys(aisleOv)) {
+            if (aisleOv[k] === name)
+                aisleOv[k] = 'Other';
+        }
+        AISLES.splice(idx, 1);
+        saveSettings();
+        renderAisleEditList();
+    }
+
+    function addAisle() {
+        const inp = document.getElementById('new-aisle-inp');
+        const v = inp.value.trim();
+        if (!v)
+            return;
+        if (AISLES.some(a => a.toLowerCase() === v.toLowerCase())) {
+            alert('That aisle already exists.');
+            return;
+        }
+        AISLES.push(v);
+        inp.value = '';
+        saveSettings();
+        renderAisleEditList();
+    }
+
     function openAisleModal() {
+        switchAisleTab('assign');
         const smap = buildShopMap();
         const recipeItems = Object.entries(smap).map(([k, v]) => ({
             key: k,
