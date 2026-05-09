@@ -2296,7 +2296,7 @@
                         name: parsed.name,
                         entries: [],
                         recipes: [],
-                        aisle: getAisle(ing)
+                        aisle: getAisle(parsed.name)
                     };
                 }
                 map[groupKey].entries.push({
@@ -2357,7 +2357,7 @@
             baseDisplay: v.baseDisplay,
             ingredientName: v.ingredientName,
             count: v.count,
-            aisle: v.aisle || getAisle(v.display),
+            aisle: v.aisle || getAisle(v.ingredientName || v.display),
             recipes: v.recipes || []
         }));
         const man = manuals.map(m => ({
