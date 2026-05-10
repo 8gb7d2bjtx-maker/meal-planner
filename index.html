@@ -869,7 +869,7 @@
 
     .fta {
         resize: vertical;
-        min-height: 80px
+        min-height: 160px
     }
 
     .frow {
@@ -1392,11 +1392,11 @@
             </div>
             <div class="fg">
                 <label class="fl">Ingredients (one per line)</label>
-                <textarea class="fta" id="e-ings" placeholder="2 lbs chicken thighs&#10;3 cloves garlic"></textarea>
+                <textarea class="fta" id="e-ings" style="min-height:200px" placeholder="2 lbs chicken thighs&#10;3 cloves garlic"></textarea>
             </div>
             <div class="fg">
                 <label class="fl">Instructions (one step per line)</label>
-                <textarea class="fta" id="e-steps" placeholder="Step 1...&#10;Step 2..."></textarea>
+                <textarea class="fta" id="e-steps" style="min-height:200px" placeholder="Step 1...&#10;Step 2..."></textarea>
             </div>
             <div class="m-acts">
                 <button class="btn-danger" id="btn-del" style="display:none" onclick="delRecipe()">Delete recipe</button>
