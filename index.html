@@ -394,11 +394,12 @@
         font-size: 10px;
         color: var(--ink-3);
         transition: transform .2s;
-        display: inline-block
+        display: inline-block;
+        transform: rotate(90deg)
     }
 
     .cat-chev.closed {
-        transform: rotate(-90deg)
+        transform: rotate(0deg)
     }
 
     .recipe-cards {
@@ -1320,8 +1321,7 @@
                     </select>
                     <button class="btn-primary" onclick="openEdit(null)">+ Add recipe</button>
                     <button class="btn-primary" onclick="openCatModal()">+ Category</button>
-                    <button class="btn-primary" style="background:none;color:var(--ink-2);border:1px solid var(--border-2)" onclick="collapseAll()">Collapse all</button>
-                    <button class="btn-primary" style="background:none;color:var(--ink-2);border:1px solid var(--border-2)" onclick="expandAll()">Expand all</button>
+                    <button id="btn-collapse-toggle" class="btn-primary" style="background:none;color:var(--ink-2);border:1px solid var(--border-2)" onclick="toggleCollapseAll()">Collapse all</button>
                 </div>
                 <div class="grid-wrap" id="grid"></div>
             </div>
@@ -1991,6 +1991,20 @@
         cards.classList.toggle('collapsed', isOpen);
         chev.classList.toggle('closed', isOpen);
     }
+    function toggleCollapseAll() {
+        const btn = document.getElementById('btn-collapse-toggle');
+        const allCards = document.querySelectorAll('.recipe-cards');
+        const anyOpen = [...allCards].some(el => !el.classList.contains('collapsed'));
+        if (anyOpen) {
+            allCards.forEach(el => el.classList.add('collapsed'));
+            document.querySelectorAll('.cat-chev').forEach(el => el.classList.add('closed'));
+            btn.textContent = 'Expand all';
+        } else {
+            allCards.forEach(el => el.classList.remove('collapsed'));
+            document.querySelectorAll('.cat-chev').forEach(el => el.classList.remove('closed'));
+            btn.textContent = 'Collapse all';
+        }
+    }
     function collapseAll() {
         document.querySelectorAll('.recipe-cards').forEach(el => el.classList.add('collapsed'));
         document.querySelectorAll('.cat-chev').forEach(el => el.classList.add('closed'));
@@ -2125,11 +2139,40 @@
     }
 
     function rmMeal(day, i) {
+        const removedId = plan[day][i];
         plan[day].splice(i, 1);
+        // Clear checked state for any items that came from this recipe
+        // by rebuilding the map without it and removing those keys from checked
+        const removedRecipe = R.find(r => r.id === removedId);
+        if (removedRecipe) {
+            removedRecipe.ingredients.forEach(ing => {
+                const parsed = parseIngredient(ing);
+                const key = parsed.name.toLowerCase().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, ' ').trim();
+                // Only clear if this recipe was the sole contributor to that key
+                const stillPlanned = Object.values(plan).flat()
+                .map(id => R.find(r => r.id === id))
+                .filter(Boolean)
+                .some(r => r.ingredients.some(i2 => {
+                    const p2 = parseIngredient(i2);
+                    return p2.name.toLowerCase().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, ' ').trim() === key;
+                }));
+                if (!stillPlanned)
+                    delete checked[key];
+            });
+        }
         saveSettings();
         renderCal();
         renderShopping();
         renderCooking();
+    }
+
+    function clearAllManuals() {
+        if (!confirm('Remove all manually added items?'))
+            return;
+        manuals.forEach(m => delete checked['m_' + m.id]);
+        manuals = [];
+        saveSettings();
+        renderShopping();
     }
     function resetPlan() {
         if (!confirm('Clear the entire meal plan?'))
@@ -2306,7 +2349,7 @@
                 const groupKey = parsed.name.toLowerCase().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, ' ').trim();
                 if (!map[groupKey]) {
                     map[groupKey] = {
-                        name: parsed.name.toLowerCase(),
+                        name: parsed.name,
                         entries: [],
                         recipes: [],
                         aisle: getAisle(parsed.name)
@@ -2404,26 +2447,23 @@
                 byAisle[x.aisle] = [];
             byAisle[x.aisle].push(x);
         });
-        // Sort aisles in the order defined by AISLES, with any unknown aisles at the end
         const aisleOrder = [...AISLES, ...Object.keys(byAisle).filter(a => !AISLES.includes(a))];
         const aisleHTML = aisleOrder.filter(a => byAisle[a]).map(aisle => {
             const its = byAisle[aisle];
             return `<div class="aisle-sec">
-                <div class="aisle-hd" onclick="toggleAisle(this)">
+                <div class="aisle-hd" style="cursor:default">
                     <span class="aisle-nm">${
             aisle}</span>
                     <span class="aisle-cnt">${its.length} item${its.length !== 1 ? 's' : ''}</span>
-                    <span class="aisle-chev open">&#9654;</span>
                 </div>
                 <div class="aisle-items">${
-
             its.map(item => renderShopItem(item)).join('')}</div>
             </div>`
             ;
         }).join('');
         const checkedHTML = checkedItems.length ? `
             <div class="aisle-sec" style="margin-top:16px">
-                <div class="aisle-hd" onclick="toggleAisle(this)">
+                <div class="aisle-hd" onclick="toggleAisle(this)" style="cursor:pointer">
                     <span class="aisle-nm" style="color:var(--ink-3)">Already have it</span>
                     <span class="aisle-cnt">${
 
@@ -2436,7 +2476,14 @@
         checkedItems.map(item => renderShopItem(item)).join('')}</div>
             </div>`
         : '';
-        el.innerHTML = aisleHTML + checkedHTML;
+        const clearManualsBtn = manuals.length ? `
+            <div style="text-align:center;margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
+                <button class="btn-sm" onclick="clearAllManuals()" style="color:var(--terra);border-color:var(--terra)">Clear all added items</button>
+            </div>`
+
+
+        : '';
+        el.innerHTML = aisleHTML + checkedHTML + clearManualsBtn;
     }
 
     function renderShopItem(item) {
