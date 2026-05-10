@@ -797,7 +797,7 @@
         background: var(--white);
         border-radius: 12px;
         width: 100%;
-        max-width: 540px;
+        max-width: 720px;
         max-height: 88vh;
         overflow-y: auto;
         padding: 26px;
@@ -1418,11 +1418,11 @@
             </div>
             <div id="aisle-panel-assign">
                 <p style="font-size:13px;color:var(--ink-2);margin-bottom:14px">Reassign ingredients to match your store's layout.</p>
-                <div id="aisle-list" style="max-height:300px;overflow-y:auto"></div>
+                <div id="aisle-list" style="max-height:420px;overflow-y:auto"></div>
             </div>
             <div id="aisle-panel-edit" style="display:none">
                 <p style="font-size:13px;color:var(--ink-2);margin-bottom:14px">Rename or remove aisles. Add new ones to match your store.</p>
-                <div id="aisle-edit-list" style="max-height:240px;overflow-y:auto;margin-bottom:14px"></div>
+                <div id="aisle-edit-list" style="max-height:360px;overflow-y:auto;margin-bottom:14px"></div>
                 <div style="display:flex;gap:8px">
                     <input class="fi" id="new-aisle-inp" placeholder="New aisle name..." onkeydown="if(event.key==='Enter')addAisle()">
                     <button class="btn-save" onclick="addAisle()">Add</button>
@@ -1461,7 +1461,7 @@
             <button class="m-close" onclick="closeOv('ov-cat')">&#10005;</button>
             <div class="modal-title">Manage Categories</div>
             <p style="font-size:13px;color:var(--ink-2);margin-bottom:14px">Drag rows to reorder. Custom categories can be removed if no recipes are assigned.</p>
-            <div id="cat-list" style="max-height:300px;overflow-y:auto;margin-bottom:16px"></div>
+            <div id="cat-list" style="max-height:420px;overflow-y:auto;margin-bottom:16px"></div>
             <div style="display:flex;gap:8px">
                 <input class="fi" id="new-cat-inp" placeholder="New category name..." onkeydown="if(event.key==='Enter')addCategory()">
                 <button class="btn-save" onclick="addCategory()">Add</button>
@@ -1715,8 +1715,14 @@
         if (aisleOv[k])
             return aisleOv[k];
         for (const [m, a] of Object.entries(AISLE_MAP)) {
-            if (k.includes(m))
-                return a;
+            if (k.includes(m)) {
+                // If this AISLE_MAP value is still a valid aisle, use it
+                if (AISLES.includes(a))
+                    return a;
+                // Otherwise the aisle was renamed — check if aisleOv has a mapping for this canonical name
+                // or just return 'Other' since we can't know the new name reliably
+                return 'Other';
+            }
         }
         return 'Other';
     }
@@ -2300,7 +2306,7 @@
                 const groupKey = parsed.name.toLowerCase().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, ' ').trim();
                 if (!map[groupKey]) {
                     map[groupKey] = {
-                        name: parsed.name,
+                        name: parsed.name.toLowerCase(),
                         entries: [],
                         recipes: [],
                         aisle: getAisle(parsed.name)
@@ -2342,10 +2348,19 @@
                 else
                     parts.push(formatDisplay(total, unit, val.name));
             }
-            [...new Set(unparseable)].forEach(o => parts.push(o));
+            [...new Set(unparseable.map(o => o.toLowerCase()))].forEach(o => parts.push(o));
+            // Deduplicate parts case-insensitively
+            const seenParts = new Set();
+            const uniqueParts = parts.filter(p => {
+                const k = p.toLowerCase().trim();
+                if (seenParts.has(k))
+                    return false;
+                seenParts.add(k);
+                return true;
+            });
             result[key] = {
-                display: itemOverrides[key] ? itemOverrides[key].display : parts.join(' + '),
-                baseDisplay: parts.join(' + '),
+                display: itemOverrides[key] ? itemOverrides[key].display : uniqueParts.join(' + '),
+                baseDisplay: uniqueParts.join(' + '),
                 count: entries.length,
                 recipes: val.recipes,
                 aisle: val.aisle,
@@ -2389,7 +2404,9 @@
                 byAisle[x.aisle] = [];
             byAisle[x.aisle].push(x);
         });
-        const aisleHTML = Object.keys(byAisle).sort().map(aisle => {
+        // Sort aisles in the order defined by AISLES, with any unknown aisles at the end
+        const aisleOrder = [...AISLES, ...Object.keys(byAisle).filter(a => !AISLES.includes(a))];
+        const aisleHTML = aisleOrder.filter(a => byAisle[a]).map(aisle => {
             const its = byAisle[aisle];
             return `<div class="aisle-sec">
                 <div class="aisle-hd" onclick="toggleAisle(this)">
@@ -2667,10 +2684,15 @@
         }
         const oldName = AISLES[idx];
         AISLES[idx] = newName;
-        // Update any aisleOv entries pointing to old name
+        // Update aisleOv entries pointing to old name
         for (const k of Object.keys(aisleOv)) {
             if (aisleOv[k] === oldName)
                 aisleOv[k] = newName;
+        }
+        // Also update AISLE_MAP so auto-assignment still works with new name
+        for (const k of Object.keys(AISLE_MAP)) {
+            if (AISLE_MAP[k] === oldName)
+                AISLE_MAP[k] = newName;
         }
         saveSettings();
         renderAisleEditList();
@@ -2903,6 +2925,11 @@
     let _reorder = null; // global state for active reorder session
 
     function initReorderDrag(container, type) {
+        // Guard: only attach listeners once per container
+        if (container._reorderInit)
+            return;
+        container._reorderInit = true;
+        container._reorderType = type;
         container.addEventListener('mousedown', e => {
             const handle = e.target.closest('.reorder-handle');
             if (!handle)
@@ -2920,58 +2947,72 @@
             // Ghost element that follows the mouse
             const ghost = document.createElement('div');
             ghost.style.cssText = `position:fixed;z-index:9999;pointer-events:none;
-                background:#431f51;color:#fff;border-radius:6px;padding:7px 12px;
-                font-size:13px;font-family:inherit;box-shadow:0 4px 16px rgba(0,0,0,.3);
-                white-space:nowrap;opacity:0.9;`
+                background:#431f51;color:#fff;border-radius:6px;padding:5px 10px;
+                font-size:13px;font-family:inherit;box-shadow:0 2px 8px rgba(0,0,0,.2);
+                white-space:nowrap;opacity:0.75;`
 
 
             ;
             ghost.textContent = row.querySelector('input') ? row.querySelector('input').value : row.textContent.trim().replace(/[↕✕]/g, '').trim();
             document.body.appendChild(ghost);
 
-            // Indicator line
+            // Indicator line — fixed to viewport but sized to container width
             const line = document.createElement('div');
-            line.style.cssText = `position:absolute;left:0;right:0;height:2px;background:#431f51;
+            line.style.cssText = `position:fixed;height:2px;background:#431f51;
                 border-radius:2px;pointer-events:none;z-index:9998;display:none;`
             ;
-            container.style.position = 'relative';
-            container.appendChild(line);
+            document.body.appendChild(line);
+
+            // Set line width/position to match container
+            function updateLineWidth() {
+                const cr = container.getBoundingClientRect();
+                line.style.left = cr.left + 'px';
+                line.style.width = cr.width + 'px';
+            }
 
             row.style.opacity = '0.3';
-
             let currentDropIdx = fromIdx;
 
             function onMove(e) {
-                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                const clientY = e.clientY;
+                const clientX = e.clientX;
 
-                // Move ghost
-                ghost.style.left = (clientX + 12) + 'px';
-                ghost.style.top = (clientY - 16) + 'px';
+                ghost.style.left = (clientX + 14) + 'px';
+                ghost.style.top = (clientY - 12) + 'px';
 
-                // Find which slot we're over
                 const currentRows = rows();
-                let newDropIdx = currentRows.length - 1;
                 line.style.display = 'block';
+                updateLineWidth();
+
+                // Find insertion point based on mouse Y vs each row's midpoint
+                let newIdx = currentRows.length - 1; // default: end of list
+                let lineY = null;
 
                 for (let i = 0; i < currentRows.length; i++) {
-                    const r = currentRows[i];
-                    const rect = r.getBoundingClientRect();
-                    const containerRect = container.getBoundingClientRect();
+                    const rect = currentRows[i].getBoundingClientRect();
                     const mid = rect.top + rect.height / 2;
-
                     if (clientY < mid) {
-                        newDropIdx = i <= fromIdx ? i : i - 1;
-                        // Position line above row i
-                        line.style.top = (rect.top - containerRect.top - 1) + 'px';
+                        newIdx = i;
+                        lineY = rect.top;
                         break;
-                    } else if (i === currentRows.length - 1) {
-                        newDropIdx = i < fromIdx ? i : i;
-                        // Position line below last row
-                        line.style.top = (rect.bottom - containerRect.top - 1) + 'px';
+                    }
+                    if (i === currentRows.length - 1) {
+                        lineY = rect.bottom;
                     }
                 }
-                currentDropIdx = newDropIdx;
+
+                line.style.top = (lineY - 1) + 'px';
+
+                // Convert visual insertion index to array index after removal of dragged item
+                // newIdx is where we want it to appear in the final list
+                // If inserting before an item that comes after the dragged item, no adjustment needed
+                // If inserting before an item that comes before (or at) the dragged item, no adjustment needed
+                // The splice logic: remove fromIdx first, then insert at adjusted position
+                let adjustedIdx = newIdx;
+                if (newIdx > fromIdx)
+                    adjustedIdx = newIdx - 1;
+
+                currentDropIdx = adjustedIdx;
             }
 
             function onUp() {
@@ -2980,14 +3021,14 @@
                 ghost.remove();
                 line.remove();
                 row.style.opacity = '1';
-
                 if (currentDropIdx !== fromIdx) {
-                    if (type === 'aisle') {
+                    const t = container._reorderType;
+                    if (t === 'aisle') {
                         const moved = AISLES.splice(fromIdx, 1)[0];
                         AISLES.splice(currentDropIdx, 0, moved);
                         saveSettings();
                         renderAisleEditList();
-                    } else if (type === 'cat') {
+                    } else if (t === 'cat') {
                         const cats = allCats();
                         const moved = cats.splice(fromIdx, 1)[0];
                         cats.splice(currentDropIdx, 0, moved);
