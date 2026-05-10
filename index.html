@@ -2699,7 +2699,11 @@
                         const parsed = parseIngredient(ing);
                         if (parsed.name.toLowerCase().replace(/[^a-z0-9\s]/g, '').trim() === item.ingredientName) {
                             const prefix = ing.replace(parsed.name, '').trimEnd();
-                            return prefix ? prefix + ' ' + newDisplay : newDisplay;
+                            // Parse newDisplay to extract just the name portion,
+                            // so we don't duplicate the quantity/unit prefix
+                            const parsedNew = parseIngredient(newDisplay);
+                            const newName = parsedNew.name || newDisplay;
+                            return prefix ? prefix + ' ' + newName : newName;
                         }
                         return ing;
                     });
