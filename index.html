@@ -2635,17 +2635,14 @@
             renderAisleEditList();
     }
 
-    let aisleDragIdx = null;
-    let aislePlaceholder = null;
-
     function renderAisleEditList() {
         const defaultAisles = ['Produce', 'Meat & Seafood', 'Dairy', 'Pantry', 'Canned Goods', 'Deli & Sausage', 'Spices & Seasonings', 'Frozen', 'Bakery', 'Other'];
         const container = document.getElementById('aisle-edit-list');
         container.innerHTML = AISLES.map((a, i) => {
             const isDefault = defaultAisles.includes(a);
-            return `<div class="reorder-row" data-idx="${i}" draggable="true"
-                style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border);cursor:grab;transition:transform .15s">
-                <span style="color:var(--ink-3);font-size:13px;cursor:grab;flex-shrink:0">&#8597;</span>
+            return `<div class="reorder-row" data-idx="${i}"
+                style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border)">
+                <span class="reorder-handle" style="color:var(--ink-3);font-size:15px;cursor:grab;flex-shrink:0;padding:0 2px;user-select:none">&#8597;</span>
                 <input class="fi" style="flex:1;padding:5px 8px;font-size:13px" value="${
 
             a.replace(/"/g, '&quot;')}"
@@ -2657,16 +2654,6 @@
             ;
         }).join('');
         initReorderDrag(container, 'aisle');
-    }
-
-    function aisleDrop(toIdx) {
-        if (aisleDragIdx === null || aisleDragIdx === toIdx)
-            return;
-        const moved = AISLES.splice(aisleDragIdx, 1)[0];
-        AISLES.splice(toIdx, 0, moved);
-        aisleDragIdx = null;
-        saveSettings();
-        renderAisleEditList();
     }
 
     function renameAisle(idx, newName) {
@@ -2912,92 +2899,111 @@
         renderAll();
     }
 
-    // ── SHARED REORDER DRAG ───────────────────────────────────────
-    // Used by both aisle and category lists to show a placeholder while dragging
-    function initReorderDrag(container, type) {
-        let dragIdx = null;
-        let placeholder = null;
-        let rows = () => [...container.querySelectorAll('.reorder-row')];
+    // ── SHARED REORDER (mouse-based, no drag API) ─────────────────
+    let _reorder = null; // global state for active reorder session
 
-        container.addEventListener('dragstart', e => {
-            const row = e.target.closest('.reorder-row');
+    function initReorderDrag(container, type) {
+        container.addEventListener('mousedown', e => {
+            const handle = e.target.closest('.reorder-handle');
+            if (!handle)
+                return;
+            const row = handle.closest('.reorder-row');
             if (!row)
                 return;
-            dragIdx = parseInt(row.dataset.idx);
-            if (type === 'aisle')
-                aisleDragIdx = dragIdx;
-            if (type === 'cat')
-                catDragIdx = dragIdx;
-            row.style.opacity = '0.35';
-            // Create placeholder matching row height
-            placeholder = document.createElement('div');
-            placeholder.className = 'drag-placeholder';
-            placeholder.style.height = row.offsetHeight + 'px';
-            e.dataTransfer.effectAllowed = 'move';
-        });
-
-        container.addEventListener('dragover', e => {
             e.preventDefault();
-            if (dragIdx === null || !placeholder)
-                return;
-            const row = e.target.closest('.reorder-row');
-            if (!row || parseInt(row.dataset.idx) === dragIdx)
-                return;
-            // Decide if cursor is in top or bottom half of target row
-            const rect = row.getBoundingClientRect();
-            const midY = rect.top + rect.height / 2;
-            if (e.clientY < midY) {
-                container.insertBefore(placeholder, row);
-            } else {
-                container.insertBefore(placeholder, row.nextSibling);
-            }
-        });
 
-        container.addEventListener('dragend', e => {
-            const row = e.target.closest('.reorder-row');
-            if (row)
-                row.style.opacity = '1';
-            if (!placeholder)
-                return;
-            // Find where placeholder landed
+            const fromIdx = parseInt(row.dataset.idx);
+            const rows = () => [...container.querySelectorAll('.reorder-row')];
             const allRows = rows();
-            const phIdx = [...container.children].indexOf(placeholder);
-            placeholder.remove();
-            placeholder = null;
-            if (phIdx === -1 || dragIdx === null) {
-                dragIdx = null;
-                return;
-            }
-            // Calculate real target index accounting for removed drag item
-            let toIdx = [...container.children].filter(el => el.classList.contains('reorder-row'))
-            .length; // fallback
-            // Re-query after placeholder removed
-            const remaining = [...container.querySelectorAll('.reorder-row')];
-            // Find the row that will end up at phIdx position
-            // Easier: count reorder-row children before phIdx in container children at time of removal
-            // Actually just rerender from phIdx relative to original
-            // Simpler approach: phIdx in container children (no placeholder now) among reorder-rows
-            const containerChildren = [...container.children];
-            // placeholder is removed; phIdx was its position before removal
-            // Count reorder-rows before phIdx to get toIdx
-            toIdx = containerChildren.slice(0, phIdx).filter(el => el.classList.contains('reorder-row')).length;
-            dragIdx = null;
-            if (type === 'aisle')
-                aisleDrop(toIdx);
-            if (type === 'cat')
-                catDrop(toIdx);
-        });
+            const rowHeight = row.offsetHeight;
 
-        container.addEventListener('dragleave', e => {
-            if (!container.contains(e.relatedTarget) && placeholder) {
-                placeholder.remove();
-                placeholder = null;
+            // Ghost element that follows the mouse
+            const ghost = document.createElement('div');
+            ghost.style.cssText = `position:fixed;z-index:9999;pointer-events:none;
+                background:#431f51;color:#fff;border-radius:6px;padding:7px 12px;
+                font-size:13px;font-family:inherit;box-shadow:0 4px 16px rgba(0,0,0,.3);
+                white-space:nowrap;opacity:0.9;`
+
+
+            ;
+            ghost.textContent = row.querySelector('input') ? row.querySelector('input').value : row.textContent.trim().replace(/[↕✕]/g, '').trim();
+            document.body.appendChild(ghost);
+
+            // Indicator line
+            const line = document.createElement('div');
+            line.style.cssText = `position:absolute;left:0;right:0;height:2px;background:#431f51;
+                border-radius:2px;pointer-events:none;z-index:9998;display:none;`
+            ;
+            container.style.position = 'relative';
+            container.appendChild(line);
+
+            row.style.opacity = '0.3';
+
+            let currentDropIdx = fromIdx;
+
+            function onMove(e) {
+                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+
+                // Move ghost
+                ghost.style.left = (clientX + 12) + 'px';
+                ghost.style.top = (clientY - 16) + 'px';
+
+                // Find which slot we're over
+                const currentRows = rows();
+                let newDropIdx = currentRows.length - 1;
+                line.style.display = 'block';
+
+                for (let i = 0; i < currentRows.length; i++) {
+                    const r = currentRows[i];
+                    const rect = r.getBoundingClientRect();
+                    const containerRect = container.getBoundingClientRect();
+                    const mid = rect.top + rect.height / 2;
+
+                    if (clientY < mid) {
+                        newDropIdx = i <= fromIdx ? i : i - 1;
+                        // Position line above row i
+                        line.style.top = (rect.top - containerRect.top - 1) + 'px';
+                        break;
+                    } else if (i === currentRows.length - 1) {
+                        newDropIdx = i < fromIdx ? i : i;
+                        // Position line below last row
+                        line.style.top = (rect.bottom - containerRect.top - 1) + 'px';
+                    }
+                }
+                currentDropIdx = newDropIdx;
             }
+
+            function onUp() {
+                document.removeEventListener('mousemove', onMove);
+                document.removeEventListener('mouseup', onUp);
+                ghost.remove();
+                line.remove();
+                row.style.opacity = '1';
+
+                if (currentDropIdx !== fromIdx) {
+                    if (type === 'aisle') {
+                        const moved = AISLES.splice(fromIdx, 1)[0];
+                        AISLES.splice(currentDropIdx, 0, moved);
+                        saveSettings();
+                        renderAisleEditList();
+                    } else if (type === 'cat') {
+                        const cats = allCats();
+                        const moved = cats.splice(fromIdx, 1)[0];
+                        cats.splice(currentDropIdx, 0, moved);
+                        catOrder = cats;
+                        saveSettings();
+                        renderCatList();
+                    }
+                }
+            }
+
+            document.addEventListener('mousemove', onMove);
+            document.addEventListener('mouseup', onUp);
         });
     }
 
     // ── CATEGORIES ────────────────────────────────────────────────
-    let catDragIdx = null;
 
     function openCatModal() {
         renderCatList();
@@ -3009,9 +3015,9 @@
         const cats = allCats();
         const container = document.getElementById('cat-list');
         container.innerHTML = cats.map((c, i) => `
-            <div class="reorder-row" data-idx="${i}" draggable="true"
-                style="display:flex;align-items:center;padding:8px 6px;border-bottom:1px solid var(--border);gap:10px;cursor:grab;border-radius:4px">
-                <span style="color:var(--ink-3);font-size:13px">&#8597;</span>
+            <div class="reorder-row" data-idx="${i}"
+                style="display:flex;align-items:center;padding:8px 6px;border-bottom:1px solid var(--border);gap:10px;border-radius:4px">
+                <span class="reorder-handle" style="color:var(--ink-3);font-size:15px;cursor:grab;user-select:none;padding:0 2px">&#8597;</span>
                 <span style="flex:1;font-size:14px">${
 
         c}</span>
@@ -3019,18 +3025,6 @@
             </div>`
         ).join('');
         initReorderDrag(container, 'cat');
-    }
-
-    function catDrop(toIdx) {
-        if (catDragIdx === null || catDragIdx === toIdx)
-            return;
-        const cats = allCats();
-        const moved = cats.splice(catDragIdx, 1)[0];
-        cats.splice(toIdx, 0, moved);
-        catOrder = cats;
-        catDragIdx = null;
-        saveSettings();
-        renderCatList();
     }
 
     function addCategory() {
