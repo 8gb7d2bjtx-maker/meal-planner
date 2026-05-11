@@ -1167,7 +1167,7 @@
 
     .autocomplete-list {
         position: absolute;
-        bottom: 100%;
+        top: 100%;
         left: 0;
         right: 60px;
         background: var(--white);
@@ -1177,7 +1177,7 @@
         z-index: 100;
         max-height: 200px;
         overflow-y: auto;
-        margin-bottom: 4px
+        margin-top: 4px
     }
 
     .autocomplete-item {
@@ -2435,17 +2435,19 @@
         }));
         const all = [...items, ...man];
         if (!all.length) {
-            el.innerHTML = '<div class="empty">Add recipes to your meal plan to generate a shopping list.</div>' + `
-            <div class="add-row-wrap" style="margin:16px 0">
+            el.innerHTML = `
+            <div class="add-row-wrap" style="margin-bottom:16px">
                 <div id="autocomplete-list" class="autocomplete-list" style="display:none"></div>
                 <div class="add-row">
-                    <input class="add-inp" id="add-inp" placeholder="Add item (e.g. 2 cups oat milk)..."
+                    <input class="add-inp" id="add-inp" style="font-size:16px" placeholder="Add item (e.g. 2 cups oat milk)..."
                         oninput="showAutocomplete()"
                         onkeydown="if(event.key==='Enter'){addManual()}"
                         onblur="setTimeout(()=>{document.getElementById('autocomplete-list').style.display='none'},200)">
                     <button class="btn-add" onclick="addManual()">Add</button>
                 </div>
-            </div>`
+            </div>
+            <div class="empty">Add recipes to your meal plan to generate a shopping list.</div>`
+
 
 
 
@@ -2503,10 +2505,10 @@
 
         : '';
         const addRowHTML = `
-            <div class="add-row-wrap" style="margin:16px 0">
+            <div class="add-row-wrap" style="margin-bottom:16px">
                 <div id="autocomplete-list" class="autocomplete-list" style="display:none"></div>
                 <div class="add-row">
-                    <input class="add-inp" id="add-inp" placeholder="Add item (e.g. 2 cups oat milk)..."
+                    <input class="add-inp" id="add-inp" style="font-size:16px" placeholder="Add item (e.g. 2 cups oat milk)..."
                         oninput="showAutocomplete()"
                         onkeydown="if(event.key==='Enter'){addManual()}"
                         onblur="setTimeout(()=>{document.getElementById('autocomplete-list').style.display='none'},200)">
@@ -2523,7 +2525,7 @@
 
 
         ;
-        el.innerHTML = aisleHTML + addRowHTML + checkedHTML + clearManualsBtn;
+        el.innerHTML = addRowHTML + aisleHTML + checkedHTML + clearManualsBtn;
     }
 
     function renderShopItem(item) {
