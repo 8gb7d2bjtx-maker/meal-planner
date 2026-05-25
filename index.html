@@ -1711,6 +1711,7 @@
         isMobile = window.innerWidth <= 640;
         const strip = document.getElementById('mobile-week-strip');
         if (strip) strip.style.display = isMobile ? 'flex' : 'none';
+        if (isMobile && R.length > 0) renderMobileStrip();
     }
 
     function renderMobileStrip() {
@@ -1795,10 +1796,11 @@
         return true;
     }
 
-    window.addEventListener('resize', checkMobile);
+    window.addEventListener('resize', () => { checkMobile(); renderGrid(); });
 
-    // Initialize
+    // Initialize — checkMobile first so isMobile is set before loadData renders
     checkMobile();
+    loadData();
     </script>
 </body>
 </html>
