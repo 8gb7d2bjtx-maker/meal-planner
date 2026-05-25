@@ -775,72 +775,75 @@
     let touchDragId = null;
     let touchGhost = null;
     let touchLastTarget = null;
+    let touchDragStartX = 0;
+    let touchDragStartY = 0;
+    let touchDragMoved = false;
 
     function touchDragStart(e, id) {
-        // Only start drag if touch holds for a moment — prevents conflict with scrolling
+        if (isMobile) return; // mobile uses tap-to-add instead
         touchDragId = id;
+        touchGhost = null; // don't create ghost yet — wait for movement
         const touch = e.touches[0];
-
-        // Create ghost element
-        touchGhost = document.createElement('div');
-        touchGhost.className = 'touch-ghost';
-        const card = e.currentTarget;
-        touchGhost.textContent = card.querySelector('.rcard-name').textContent;
-        document.body.appendChild(touchGhost);
-        touchGhost.style.left = touch.clientX + 'px';
-        touchGhost.style.top = touch.clientY + 'px';
-
-        e.preventDefault();
+        touchDragStartX = touch.clientX;
+        touchDragStartY = touch.clientY;
+        touchDragMoved = false;
     }
 
     function touchDragMove(e) {
-        if (!touchDragId || !touchGhost) return;
-        e.preventDefault();
+        if (!touchDragId) return;
         const touch = e.touches[0];
 
-        // Move ghost
+        // Only activate drag after finger moves more than 8px
+        if (!touchDragMoved) {
+            const dx = Math.abs(touch.clientX - touchDragStartX);
+            const dy = Math.abs(touch.clientY - touchDragStartY);
+            if (dx < 8 && dy < 8) return;
+            touchDragMoved = true;
+            // Now create ghost
+            const card = e.currentTarget;
+            touchGhost = document.createElement('div');
+            touchGhost.className = 'touch-ghost';
+            touchGhost.textContent = card ? card.querySelector('.rcard-name').textContent : '';
+            document.body.appendChild(touchGhost);
+        }
+
+        if (!touchGhost) return;
+        e.preventDefault();
+
         touchGhost.style.left = touch.clientX + 'px';
         touchGhost.style.top = touch.clientY + 'px';
 
-        // Highlight drop target
         touchGhost.style.display = 'none';
         const el = document.elementFromPoint(touch.clientX, touch.clientY);
         touchGhost.style.display = '';
 
         const slot = el ? el.closest('.day-slot') : null;
-
-        if (touchLastTarget && touchLastTarget !== slot) {
-            touchLastTarget.classList.remove('over');
-        }
-        if (slot) {
-            slot.classList.add('over');
-            touchLastTarget = slot;
-        } else {
-            touchLastTarget = null;
-        }
+        if (touchLastTarget && touchLastTarget !== slot) touchLastTarget.classList.remove('over');
+        if (slot) { slot.classList.add('over'); touchLastTarget = slot; }
+        else { touchLastTarget = null; }
     }
 
     function touchDragEnd(e) {
         if (!touchDragId) return;
-        const touch = e.changedTouches[0];
 
-        // Clean up ghost
         if (touchGhost) { touchGhost.remove(); touchGhost = null; }
-
-        // Find drop target
-        const el = document.elementFromPoint(touch.clientX, touch.clientY);
-        const slot = el ? el.closest('.day-slot') : null;
-
         if (touchLastTarget) { touchLastTarget.classList.remove('over'); touchLastTarget = null; }
 
-        if (slot) {
-            const day = slot.id.replace('ds-', '');
-            if (!plan[day]) plan[day] = [];
-            plan[day].push(touchDragId);
-            saveSettings(); renderCal(); renderShopping(); renderCooking();
+        // Only drop if we actually dragged
+        if (touchDragMoved) {
+            const touch = e.changedTouches[0];
+            const el = document.elementFromPoint(touch.clientX, touch.clientY);
+            const slot = el ? el.closest('.day-slot') : null;
+            if (slot) {
+                const day = slot.id.replace('ds-', '');
+                if (!plan[day]) plan[day] = [];
+                plan[day].push(touchDragId);
+                saveSettings(); renderCal(); renderShopping(); renderCooking();
+            }
         }
 
         touchDragId = null;
+        touchDragMoved = false;
     }
 
     function rmMeal(day, i) {
