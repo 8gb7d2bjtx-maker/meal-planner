@@ -1207,6 +1207,14 @@
 
     .autocomplete-item:hover {
         background: var(--sage-light)
+    }/* Mobile panel hidden by default on desktop */
+
+    .mobile-week-panel {
+        display: none
+    }
+
+    .mobile-week-panel-footer {
+        display: none
     }
 
     @media (max-width: 640px) {
@@ -1303,6 +1311,7 @@
         }/* Full week panel that slides down */
 
         .mobile-week-panel {
+            display: block;
             background: #323031;
             overflow: hidden;
             max-height: 0;
@@ -1318,9 +1327,9 @@
         }
 
         .mobile-week-panel-footer {
+            display: flex;
             padding: 8px 12px 12px;
             border-top: 1px solid rgba(255, 255, 255, .1);
-            display: flex;
             gap: 8px
         }/* Toast notification */
 
@@ -1433,7 +1442,6 @@
             </div>
             <div class="mobile-week-panel-footer">
                 <button class="btn-reset" onclick="resetPlan()" style="flex:1">Reset meal plan</button>
-                <button class="mobile-week-btn" onclick="toggleMobileWeek()" style="color:rgba(255,255,255,.7)">Done</button>
             </div>
         </div>
         <div class="mobile-toast" id="mobile-toast"></div>
@@ -1857,12 +1865,6 @@
             }
         }
         return 'Other';
-    }
-
-    // Normalize an ingredient name to a consistent comparison key.
-    // Strips special chars, collapses whitespace — matches buildShopMap's groupKey logic.
-    function normIngKey(name) {
-        return (name || '').toLowerCase().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, ' ').trim();
     }
 
     // ── STATUS ───────────────────────────────────────────────────
@@ -2486,7 +2488,7 @@
         getPlannedRecipes().forEach(r => {
             r.ingredients.forEach(ing => {
                 const parsed = parseIngredient(ing);
-                const groupKey = normIngKey(parsed.name);
+                const groupKey = parsed.name.toLowerCase().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, ' ').trim();
                 if (!map[groupKey]) {
                     map[groupKey] = {
                         name: parsed.name,
@@ -2791,10 +2793,9 @@
                     m.name = newDisplay;
                 }
             } else {
-                const normItemKey = normIngKey(item.ingredientName);
                 const affectedRecipes = R.filter(r => r.ingredients.some(ing => {
                     const parsed = parseIngredient(ing);
-                    return normIngKey(parsed.name) === normItemKey;
+                    return parsed.name.toLowerCase().replace(/[^a-z0-9\s]/g, '').trim() === item.ingredientName;
                 }));
                 if (affectedRecipes.length > 1) {
                     const names = affectedRecipes.map(r => r.name).join(', ');
@@ -2812,7 +2813,7 @@
                 for (const r of affectedRecipes) {
                     r.ingredients = r.ingredients.map(ing => {
                         const parsed = parseIngredient(ing);
-                        if (normIngKey(parsed.name) === normItemKey) {
+                        if (parsed.name.toLowerCase().replace(/[^a-z0-9\s]/g, '').trim() === item.ingredientName) {
                             const prefix = ing.replace(parsed.name, '').trimEnd();
                             // Parse newDisplay to extract just the name portion,
                             // so we don't duplicate the quantity/unit prefix
