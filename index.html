@@ -125,13 +125,6 @@
         margin-bottom: 2px
     }
 
-    .sidebar-sub {
-        font-size: 11px;
-        color: rgba(255, 255, 255, .5);
-        text-transform: uppercase;
-        letter-spacing: .05em
-    }
-
     .cal-days {
         flex: 1;
         overflow-y: auto;
@@ -357,19 +350,6 @@
 
     .btn-primary:hover {
         background: var(--sage-dark)
-    }
-
-    .btn-sky {
-        padding: 6px 13px;
-        background: var(--sky);
-        color: #fff;
-        border: none;
-        border-radius: 6px;
-        font-size: 13px;
-        font-weight: 500;
-        cursor: pointer;
-        margin-left: auto;
-        font-family: inherit
     }
 
     .grid-wrap {
@@ -704,11 +684,6 @@
         flex: 1
     }
 
-    .cook-day-cnt {
-        font-size: 12px;
-        color: var(--ink-3)
-    }
-
     .cook-chev {
         color: var(--ink-3);
         font-size: 11px;
@@ -960,17 +935,6 @@
         letter-spacing: .05em;
         margin-bottom: 7px;
         margin-top: 2px
-    }
-
-    .cat-over {
-        background: var(--sage-light) !important
-    }
-
-    .drag-placeholder {
-        background: var(--sage-light);
-        border: 2px dashed #431f51;
-        border-radius: 6px;
-        pointer-events: none;
     }/* Touch drag ghost */
 
     .touch-ghost {
@@ -1867,6 +1831,12 @@
         return 'Other';
     }
 
+    // Normalize an ingredient name to a consistent comparison key.
+    // Strips special chars, collapses whitespace — used everywhere ingredients are matched.
+    function normIngKey(name) {
+        return (name || '').toLowerCase().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, ' ').trim();
+    }
+
     // ── STATUS ───────────────────────────────────────────────────
     function showStatus(msg, isError=false) {
         const el = document.getElementById('save-status');
@@ -2135,14 +2105,6 @@
                 btn.textContent = '▼';
         }
     }
-    function collapseAll() {
-        document.querySelectorAll('.recipe-cards').forEach(el => el.classList.add('collapsed'));
-        document.querySelectorAll('.cat-chev').forEach(el => el.classList.add('closed'));
-    }
-    function expandAll() {
-        document.querySelectorAll('.recipe-cards').forEach(el => el.classList.remove('collapsed'));
-        document.querySelectorAll('.cat-chev').forEach(el => el.classList.remove('closed'));
-    }
     function calDragStart(day, idx, e) {
         calDragSrc = {
             day,
@@ -2289,14 +2251,14 @@
         if (removedRecipe) {
             removedRecipe.ingredients.forEach(ing => {
                 const parsed = parseIngredient(ing);
-                const key = parsed.name.toLowerCase().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, ' ').trim();
+                const key = normIngKey(parsed.name);
                 // Only clear if this recipe was the sole contributor to that key
                 const stillPlanned = Object.values(plan).flat()
                 .map(id => R.find(r => r.id === id))
                 .filter(Boolean)
                 .some(r => r.ingredients.some(i2 => {
                     const p2 = parseIngredient(i2);
-                    return p2.name.toLowerCase().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, ' ').trim() === key;
+                    return normIngKey(p2.name) === key;
                 }));
                 if (!stillPlanned)
                     delete checked[key];
@@ -2488,7 +2450,7 @@
         getPlannedRecipes().forEach(r => {
             r.ingredients.forEach(ing => {
                 const parsed = parseIngredient(ing);
-                const groupKey = parsed.name.toLowerCase().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, ' ').trim();
+                const groupKey = normIngKey(parsed.name);
                 if (!map[groupKey]) {
                     map[groupKey] = {
                         name: parsed.name,
@@ -2793,9 +2755,10 @@
                     m.name = newDisplay;
                 }
             } else {
+                const normItemKey = normIngKey(item.ingredientName);
                 const affectedRecipes = R.filter(r => r.ingredients.some(ing => {
                     const parsed = parseIngredient(ing);
-                    return parsed.name.toLowerCase().replace(/[^a-z0-9\s]/g, '').trim() === item.ingredientName;
+                    return normIngKey(parsed.name) === normItemKey;
                 }));
                 if (affectedRecipes.length > 1) {
                     const names = affectedRecipes.map(r => r.name).join(', ');
@@ -2813,7 +2776,7 @@
                 for (const r of affectedRecipes) {
                     r.ingredients = r.ingredients.map(ing => {
                         const parsed = parseIngredient(ing);
-                        if (parsed.name.toLowerCase().replace(/[^a-z0-9\s]/g, '').trim() === item.ingredientName) {
+                        if (normIngKey(parsed.name) === normItemKey) {
                             const prefix = ing.replace(parsed.name, '').trimEnd();
                             // Parse newDisplay to extract just the name portion,
                             // so we don't duplicate the quantity/unit prefix
@@ -3085,7 +3048,8 @@
         }
         closeOv('ov-edit');
         renderAll();
-        openView(rec.id);
+        if (!editId)
+            openView(rec.id);
     }
 
     async function delRecipe() {
@@ -3102,8 +3066,6 @@
     }
 
     // ── SHARED REORDER (mouse-based, no drag API) ─────────────────
-    let _reorder = null; // global state for active reorder session
-
     function initReorderDrag(container, type) {
         // Guard: only attach listeners once per container
         if (container._reorderInit)
@@ -3121,8 +3083,6 @@
 
             const fromIdx = parseInt(row.dataset.idx);
             const rows = () => [...container.querySelectorAll('.reorder-row')];
-            const allRows = rows();
-            const rowHeight = row.offsetHeight;
 
             // Ghost element that follows the mouse
             const ghost = document.createElement('div');
