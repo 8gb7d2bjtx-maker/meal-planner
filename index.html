@@ -240,7 +240,13 @@
         flex: 1;
         overflow: hidden;
         text-overflow: ellipsis;
-        white-space: nowrap
+        white-space: nowrap;
+        cursor: pointer
+    }
+
+    .meal-chip-name:hover {
+        text-decoration: underline;
+        text-underline-offset: 2px
     }
 
     .chip-rm {
@@ -2012,37 +2018,29 @@
                 if (!r)
                     return '';
                 return `<div class="meal-chip" draggable="true" ondragstart="calDragStart('${d}',${i},event)" ondragend="calDragEnd()">
-                    <span class="meal-chip-name">${r.name}</span>
-                    <button class="chip-rm" onclick="rmMeal('${d}',${i})">&#215;</button>
-                </div>`
-                ;
+                                    <span class="meal-chip-name" onclick="openView('${r.id}')">${r.name}</span>
+                                    <button class="chip-rm" onclick="rmMeal('${d}',${i})">&#215;</button>
+                                </div>`;
             }).join('');
             const isStart = d === startDay;
             const note = dayNotes[d] || '';
             return `<div class="day-slot" id="ds-${d}"
-                ondragover="event.preventDefault();this.classList.add('over')"
-                ondragleave="this.classList.remove('over')"
-                ondrop="onDrop('${
-
-            d}',event)">
-                <div class="day-lbl">
-                    <button class="day-lbl-star${
-            isStart ? ' active' : ''}" onclick="setStartDay('${d}')" title="Start week on ${d}">&#9733;</button>
-                    <span>${d}</span>
-                    <button class="day-lbl-edit" onclick="toggleDayNote('${d}')" title="Add note">&#9998;</button>
-                </div>
-                <div id="note-display-${
-            d}" class="day-note" style="${note ? '' : 'display:none'}">${note}</div>
-                <input id="note-input-${d}" class="day-note-input" type="text" placeholder="e.g. birthday dinner out..."
-                    style="display:none"
-                    value="${
-            note.replace(/"/g, '&quot;')}"
-                    onblur="saveDayNote('${d}')"
-                    onkeydown="if(event.key==='Enter'||event.key==='Escape')this.blur()">
-                ${
-            chips}
-            </div>`
-            ;
+                            ondragover="event.preventDefault();this.classList.add('over')"
+                            ondragleave="this.classList.remove('over')"
+                            ondrop="onDrop('${d}',event)">
+                            <div class="day-lbl">
+                                <button class="day-lbl-star${isStart ? ' active' : ''}" onclick="setStartDay('${d}')" title="Start week on ${d}">&#9733;</button>
+                                <span>${d}</span>
+                                <button class="day-lbl-edit" onclick="toggleDayNote('${d}')" title="Add note">&#9998;</button>
+                            </div>
+                            <div id="note-display-${d}" class="day-note" style="${note ? '' : 'display:none'}">${note}</div>
+                            <input id="note-input-${d}" class="day-note-input" type="text" placeholder="e.g. birthday dinner out..."
+                                style="display:none"
+                                value="${note.replace(/"/g, '&quot;')}"
+                                onblur="saveDayNote('${d}')"
+                                onkeydown="if(event.key==='Enter'||event.key==='Escape')this.blur()">
+                            ${chips}
+                        </div>`;
         }).join('');
         if (isMobile)
             renderMobileStrip();
@@ -2067,36 +2065,26 @@
         const rest = Object.keys(grouped).filter(c => !orderedCats.includes(c));
         const plannedIds = new Set(Object.values(plan).flat());
         el.innerHTML = [...orderedCats, ...rest].map(cat => `
-            <div class="cat-section">
-                <div class="cat-title" onclick="toggleCat(this)">
-                    <span>${
-
-        cat}</span><span class="cat-chev">&#9654;</span>
-                </div>
-                <div class="recipe-cards">
-                    ${
-
-        grouped[cat].map(r => `
-                        <div class="rcard${plannedIds.has(r.id) ? ' planned' : ''}" draggable="true"
-                            ondragstart="dragId='${r.id}'" ondragend="dragId=null"
-                            ontouchstart="touchDragStart(event,'${r.id}')"
-                            ontouchmove="touchDragMove(event)"
-                            ontouchend="touchDragEnd(event)"
-                            onclick="if(isMobile){mobileAddRecipe('${
-
-        r.id}')}else{openView('${r.id}')}">
-                            <div class="rcard-acts">
-                                <button class="icon-btn" onclick="event.stopPropagation();openView('${
-        r.id}')" title="View">&#9432;</button>
-                            </div>
-                            <div class="rcard-name">${
-        r.name}</div>
-                            ${isMobile && mobileSelectedDay ? `<div class="rcard-add-hint">Tap to add to ${mobileSelectedDay}</div>` : ''}
-                        </div>`).join('')}
-                </div>
-            </div>`
-
-        ).join('');
+                    <div class="cat-section">
+                        <div class="cat-title" onclick="toggleCat(this)">
+                            <span>${cat}</span><span class="cat-chev">&#9654;</span>
+                        </div>
+                        <div class="recipe-cards">
+                            ${grouped[cat].map(r => `
+                                <div class="rcard${plannedIds.has(r.id) ? ' planned' : ''}" draggable="true"
+                                    ondragstart="dragId='${r.id}'" ondragend="dragId=null"
+                                    ontouchstart="touchDragStart(event,'${r.id}')"
+                                    ontouchmove="touchDragMove(event)"
+                                    ontouchend="touchDragEnd(event)"
+                                    onclick="if(isMobile){mobileAddRecipe('${r.id}')}else{openView('${r.id}')}">
+                                    <div class="rcard-acts">
+                                        <button class="icon-btn" onclick="event.stopPropagation();openView('${r.id}')" title="View">&#9432;</button>
+                                    </div>
+                                    <div class="rcard-name">${r.name}</div>
+                                    ${isMobile && mobileSelectedDay ? `<div class="rcard-add-hint">Tap to add to ${mobileSelectedDay}</div>` : ''}
+                                </div>`).join('')}
+                        </div>
+                    </div>`).join('');
     }
 
     // ── DRAG & DROP ───────────────────────────────────────────────
@@ -2424,6 +2412,8 @@
             }
         }
         s = s.replace(/^[,\-–]\s*/, '').trim();
+        // Strip preparation notes after a comma (e.g. "apples, chopped" → "apples")
+        s = s.replace(/,.*$/, '').trim();
         return {
             qty,
             unit,
@@ -2559,28 +2549,17 @@
         const all = [...items, ...man];
         if (!all.length) {
             el.innerHTML = `
-            <div class="add-row-wrap" style="margin-bottom:16px">
-                <div id="autocomplete-list" class="autocomplete-list" style="display:none"></div>
-                <div class="add-row">
-                    <input class="add-inp" id="add-inp" style="font-size:16px" placeholder="Add item (e.g. 2 cups oat milk)..."
-                        oninput="showAutocomplete()"
-                        onkeydown="if(event.key==='Enter'){addManual()}"
-                        onblur="setTimeout(()=>{document.getElementById('autocomplete-list').style.display='none'},200)">
-                    <button class="btn-add" onclick="addManual()">Add</button>
-                </div>
-            </div>
-            <div class="empty">Add recipes to your meal plan to generate a shopping list.</div>`
-
-
-
-
-
-
-
-
-
-
-            ;
+                        <div class="add-row-wrap" style="margin-bottom:16px">
+                            <div id="autocomplete-list" class="autocomplete-list" style="display:none"></div>
+                            <div class="add-row">
+                                <input class="add-inp" id="add-inp" style="font-size:16px" placeholder="Item or 'item: aisle'..."
+                                    oninput="showAutocomplete()"
+                                    onkeydown="if(event.key==='Enter'){addManual()}"
+                                    onblur="setTimeout(()=>{document.getElementById('autocomplete-list').style.display='none'},200)">
+                                <button class="btn-add" onclick="addManual()">Add</button>
+                            </div>
+                        </div>
+                        <div class="empty">Add recipes to your meal plan to generate a shopping list.</div>`;
             return;
         }
         const unchecked = all.filter(x => !checked[x.key]);
@@ -2592,61 +2571,52 @@
             byAisle[x.aisle].push(x);
         });
         const aisleOrder = [...AISLES, ...Object.keys(byAisle).filter(a => !AISLES.includes(a))];
+        // Sort items within each aisle so similar ingredients cluster together
+        Object.values(byAisle).forEach(its => its.sort((a, b) => {
+            const ka = normIngKey(a.ingredientName || a.display);
+            const kb = normIngKey(b.ingredientName || b.display);
+            // Sort by the last (most specific) word first so "shredded lettuce"
+            // and "romaine lettuce" sort together by their shared root word
+            const rootA = ka.split(' ').slice(-1)[0];
+            const rootB = kb.split(' ').slice(-1)[0];
+            if (rootA !== rootB)
+                return rootA.localeCompare(rootB);
+            return ka.localeCompare(kb);
+        }));
         const aisleHTML = aisleOrder.filter(a => byAisle[a]).map(aisle => {
             const its = byAisle[aisle];
             return `<div class="aisle-sec">
-                <div class="aisle-hd" style="cursor:default">
-                    <span class="aisle-nm">${
-            aisle}</span>
-                    <span class="aisle-cnt">${its.length} item${its.length !== 1 ? 's' : ''}</span>
-                </div>
-                <div class="aisle-items">${
-            its.map(item => renderShopItem(item)).join('')}</div>
-            </div>`
-            ;
+                            <div class="aisle-hd" style="cursor:default">
+                                <span class="aisle-nm">${aisle}</span>
+                                <span class="aisle-cnt">${its.length} item${its.length !== 1 ? 's' : ''}</span>
+                            </div>
+                            <div class="aisle-items">${its.map(item => renderShopItem(item)).join('')}</div>
+                        </div>`;
         }).join('');
         const checkedHTML = checkedItems.length ? `
-            <div class="aisle-sec" style="margin-top:16px">
-                <div class="aisle-hd" onclick="toggleAisle(this)" style="cursor:pointer">
-                    <span class="aisle-nm" style="color:var(--ink-3)">Already have it</span>
-                    <span class="aisle-cnt">${
-
-
-        checkedItems.length} item${checkedItems.length !== 1 ? 's' : ''}</span>
-                    <span class="aisle-chev${checkedSectionOpen ? ' open' : ''}">&#9654;</span>
-                </div>
-                <div class="aisle-items" style="${
-        checkedSectionOpen ? '' : 'display:none'}">${checkedItems.map(item => renderShopItem(item)).join('')}</div>
-            </div>`
-        : '';
+                    <div class="aisle-sec" style="margin-top:16px">
+                        <div class="aisle-hd" onclick="toggleAisle(this)" style="cursor:pointer">
+                            <span class="aisle-nm" style="color:var(--ink-3)">Already have it</span>
+                            <span class="aisle-cnt">${checkedItems.length} item${checkedItems.length !== 1 ? 's' : ''}</span>
+                            <span class="aisle-chev${checkedSectionOpen ? ' open' : ''}">&#9654;</span>
+                        </div>
+                        <div class="aisle-items" style="${checkedSectionOpen ? '' : 'display:none'}">${checkedItems.map(item => renderShopItem(item)).join('')}</div>
+                    </div>` : '';
         const clearManualsBtn = manuals.length ? `
-            <div style="text-align:center;margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
-                <button class="btn-sm" onclick="clearAllManuals()" style="color:var(--terra);border-color:var(--terra)">Clear all added items</button>
-            </div>`
-
-
-        : '';
+                    <div style="text-align:center;margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
+                        <button class="btn-sm" onclick="clearAllManuals()" style="color:var(--terra);border-color:var(--terra)">Clear all added items</button>
+                    </div>` : '';
         const addRowHTML = `
-            <div class="add-row-wrap" style="margin-bottom:16px">
-                <div id="autocomplete-list" class="autocomplete-list" style="display:none"></div>
-                <div class="add-row">
-                    <input class="add-inp" id="add-inp" style="font-size:16px" placeholder="Add item (e.g. 2 cups oat milk)..."
-                        oninput="showAutocomplete()"
-                        onkeydown="if(event.key==='Enter'){addManual()}"
-                        onblur="setTimeout(()=>{document.getElementById('autocomplete-list').style.display='none'},200)">
-                    <button class="btn-add" onclick="addManual()">Add</button>
-                </div>
-            </div>`
-
-
-
-
-
-
-
-
-
-        ;
+                    <div class="add-row-wrap" style="margin-bottom:16px">
+                        <div id="autocomplete-list" class="autocomplete-list" style="display:none"></div>
+                        <div class="add-row">
+                            <input class="add-inp" id="add-inp" style="font-size:16px" placeholder="Item or 'item: aisle'..."
+                                oninput="showAutocomplete()"
+                                onkeydown="if(event.key==='Enter'){addManual()}"
+                                onblur="setTimeout(()=>{document.getElementById('autocomplete-list').style.display='none'},200)">
+                            <button class="btn-add" onclick="addManual()">Add</button>
+                        </div>
+                    </div>`;
         el.innerHTML = addRowHTML + aisleHTML + checkedHTML + clearManualsBtn;
     }
 
@@ -2655,16 +2625,13 @@
         const recipeHint = item.recipes && item.recipes.length
         ? `<div style="font-size:11px;color:var(--ink-3);margin-top:2px;line-height:1.3">${item.recipes.join(', ')}</div>` : '';
         return `<div class="shop-item${ck ? ' done' : ''}">
-            <div class="chk${ck ? ' on' : ''}" onclick="toggleChk('${item.key}',this,event)">${ck ? '&#10003;' : ''}</div>
-            <div style="flex:1;min-width:0">
-                <div class="item-name">${
-        item.display}</div>${recipeHint}
-            </div>
-            <button class="aisle-edit-btn" onclick="openShopItemEdit(${
-        JSON.stringify(item).replace(/"/g, '&quot;')})" title="Edit">&#9998;</button>
-            ${item.mid !== undefined ? `<button class="aisle-edit-btn" style="color:var(--terra)" onclick="deleteManual('${item.mid}')">&#10005;</button>` : ''}
-        </div>`
-        ;
+                    <div class="chk${ck ? ' on' : ''}" onclick="toggleChk('${item.key}',this,event)">${ck ? '&#10003;' : ''}</div>
+                    <div style="flex:1;min-width:0">
+                        <div class="item-name">${item.display}</div>${recipeHint}
+                    </div>
+                    <button class="aisle-edit-btn" onclick="openShopItemEdit(${JSON.stringify(item).replace(/"/g, '&quot;')})" title="Edit">&#9998;</button>
+                    ${item.mid !== undefined ? `<button class="aisle-edit-btn" style="color:var(--terra)" onclick="deleteManual('${item.mid}')">&#10005;</button>` : ''}
+                </div>`;
     }
 
     function toggleAisle(hd) {
@@ -2689,14 +2656,36 @@
 
     function addManual() {
         const inp = document.getElementById('add-inp');
-        const v = inp.value.trim();
+        let v = inp.value.trim();
         if (!v)
             return;
-        // Apply saved aisle override if this item has one in pastManuals
-        const existing = pastManuals.find(p => p.name.toLowerCase() === v.toLowerCase());
-        if (existing && existing.aisle) {
-            aisleOv[v.toLowerCase().replace(/[^a-z\s]/g, '').trim()] = existing.aisle;
+
+        // Parse colon syntax: "apple: produce" → name="apple", explicit aisle="Produce"
+        let explicitAisle = null;
+        const colonIdx = v.lastIndexOf(':');
+        if (colonIdx > 0) {
+            const aisleFragment = v.slice(colonIdx + 1).trim().toLowerCase();
+            const matchedAisle = AISLES.find(a => a.toLowerCase().startsWith(aisleFragment) || a.toLowerCase() === aisleFragment);
+            if (matchedAisle) {
+                explicitAisle = matchedAisle;
+                v = v.slice(0, colonIdx).trim();
+            }
         }
+
+        if (!v)
+            return;
+
+        // Apply explicit aisle or fall back to saved/auto aisle
+        const aisleKey = v.toLowerCase().replace(/[^a-z\s]/g, '').trim();
+        if (explicitAisle) {
+            aisleOv[aisleKey] = explicitAisle;
+        } else {
+            const existing = pastManuals.find(p => p.name.toLowerCase() === v.toLowerCase());
+            if (existing && existing.aisle) {
+                aisleOv[aisleKey] = existing.aisle;
+            }
+        }
+
         manuals.push({
             id: uid(),
             name: v
@@ -2704,14 +2693,18 @@
         inp.value = '';
         document.getElementById('autocomplete-list').style.display = 'none';
         document.getElementById('autocomplete-list').innerHTML = '';
-        // Update pastManuals — preserve existing aisle if already known
+
+        // Update pastManuals
+        const resolvedAisle = explicitAisle || getAisle(v);
         const idx = pastManuals.findIndex(p => p.name.toLowerCase() === v.toLowerCase());
         if (idx >= 0) {
             pastManuals[idx].name = v;
+            if (explicitAisle)
+                pastManuals[idx].aisle = explicitAisle;
         } else {
             pastManuals.push({
                 name: v,
-                aisle: getAisle(v)
+                aisle: resolvedAisle
             });
         }
         saveSettings();
@@ -2727,8 +2720,34 @@
 
     function showAutocomplete() {
         const inp = document.getElementById('add-inp');
-        const v = inp.value.trim().toLowerCase();
+        const raw = inp.value;
         const list = document.getElementById('autocomplete-list');
+
+        // Colon mode: after the colon, autocomplete aisle names
+        const colonIdx = raw.lastIndexOf(':');
+        if (colonIdx > 0) {
+            const aisleFragment = raw.slice(colonIdx + 1).trimStart().toLowerCase();
+            const aisleMatches = AISLES.filter(a =>
+            a.toLowerCase().startsWith(aisleFragment) &&
+            a.toLowerCase() !== aisleFragment
+            );
+            if (!aisleMatches.length) {
+                list.innerHTML = '';
+                list.style.display = 'none';
+                return;
+            }
+            list.innerHTML = aisleMatches.map(a =>
+            `<div class="autocomplete-item" onmousedown="selectAisleAutocomplete('${a.replace(/'/g, "&#39;")}')">
+                                <span style="font-size:13px">&#128204;</span>
+                                <span>${a}</span>
+                            </div>`
+            ).join('');
+            list.style.display = 'block';
+            return;
+        }
+
+        // Normal mode: autocomplete past item names
+        const v = raw.trim().toLowerCase();
         if (!v || pastManuals.length === 0) {
             list.innerHTML = '';
             list.style.display = 'none';
@@ -2742,12 +2761,23 @@
         }
         list.innerHTML = matches.map(p =>
         `<div class="autocomplete-item" onmousedown="selectAutocomplete('${p.name.replace(/'/g, "&#39;")}')">
-                ${p.name}
-                ${p.aisle ? `<span style="font-size:11px;color:var(--ink-3);margin-left:6px">${p.aisle}</span>` : ''}
-            </div>`
-
+                        ${p.name}
+                        ${p.aisle ? `<span style="font-size:11px;color:var(--ink-3);margin-left:6px">${p.aisle}</span>` : ''}
+                    </div>`
         ).join('');
         list.style.display = 'block';
+    }
+
+    function selectAisleAutocomplete(aisle) {
+        const inp = document.getElementById('add-inp');
+        const colonIdx = inp.value.lastIndexOf(':');
+        inp.value = inp.value.slice(0, colonIdx + 1) + ' ' + aisle;
+        document.getElementById('autocomplete-list').style.display = 'none';
+        document.getElementById('autocomplete-list').innerHTML = '';
+        inp.focus();
+        // Position cursor at end
+        const len = inp.value.length;
+        inp.setSelectionRange(len, len);
     }
 
     // FIX 1: Use onmousedown (fires before onblur) so click registers before list hides.
@@ -2875,17 +2905,13 @@
         container.innerHTML = AISLES.map((a, i) => {
             const isDefault = defaultAisles.includes(a);
             return `<div class="reorder-row" data-idx="${i}"
-                style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border)">
-                <span class="reorder-handle" style="color:var(--ink-3);font-size:15px;cursor:grab;flex-shrink:0;padding:0 2px;user-select:none">&#8597;</span>
-                <input class="fi" style="flex:1;padding:5px 8px;font-size:13px" value="${
-
-            a.replace(/"/g, '&quot;')}"
-                    onblur="renameAisle(${i}, this.value)"
-                    onkeydown="if(event.key==='Enter')this.blur()">
-                ${
-            isDefault ? `<span style="font-size:11px;color:var(--ink-3);white-space:nowrap;flex-shrink:0">built-in</span>` : `<button onclick="deleteAisle(${i})" style="background:none;border:none;cursor:pointer;color:var(--terra);font-size:16px;padding:0;line-height:1;flex-shrink:0" title="Remove">&#10005;</button>`}
-            </div>`
-            ;
+                            style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border)">
+                            <span class="reorder-handle" style="color:var(--ink-3);font-size:15px;cursor:grab;flex-shrink:0;padding:0 2px;user-select:none">&#8597;</span>
+                            <input class="fi" style="flex:1;padding:5px 8px;font-size:13px" value="${a.replace(/"/g, '&quot;')}"
+                                onblur="renameAisle(${i}, this.value)"
+                                onkeydown="if(event.key==='Enter')this.blur()">
+                            ${isDefault ? `<span style="font-size:11px;color:var(--ink-3);white-space:nowrap;flex-shrink:0">built-in</span>` : `<button onclick="deleteAisle(${i})" style="background:none;border:none;cursor:pointer;color:var(--terra);font-size:16px;padding:0;line-height:1;flex-shrink:0" title="Remove">&#10005;</button>`}
+                        </div>`;
         }).join('');
         initReorderDrag(container, 'aisle');
     }
@@ -2968,15 +2994,12 @@
         document.getElementById('aisle-list').innerHTML = unique.map(v => {
             const cur = v.aisle;
             return `<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border)">
-                <span style="flex:1;font-size:14px">${v.display}</span>
-                <select style="font-size:12px;padding:3px 7px;border:1px solid var(--border);border-radius:4px;background:var(--cream);color:var(--ink);font-family:inherit;outline:none"
-                    onchange="aisleOv['${
-            v.key}']=this.value;saveSettings()">
-                    ${AISLES.map(a => `<option value="${a}"${a === cur ? ' selected' : ''}>${a}</option>`).join('')}
-                </select>
-            </div>`
-
-            ;
+                            <span style="flex:1;font-size:14px">${v.display}</span>
+                            <select style="font-size:12px;padding:3px 7px;border:1px solid var(--border);border-radius:4px;background:var(--cream);color:var(--ink);font-family:inherit;outline:none"
+                                onchange="aisleOv['${v.key}']=this.value;saveSettings()">
+                                ${AISLES.map(a => `<option value="${a}"${a === cur ? ' selected' : ''}>${a}</option>`).join('')}
+                            </select>
+                        </div>`;
         }).join('');
         openOv('ov-aisle');
     }
@@ -2997,50 +3020,31 @@
             }));
         });
         el.innerHTML = entries.map(({day, recipe: r}) => `
-            <div class="cook-day">
-                <div class="cook-day-hd" onclick="toggleCookDay(this)">
-                    <div style="display:flex;flex-direction:column;gap:2px;flex:1">
-                        <span class="cook-day-nm">${
-
-
-        r.name}</span>
-                        <span style="font-size:11px;color:var(--ink-3);font-weight:400;text-transform:none;letter-spacing:0">${day}</span>
-                    </div>
-                    <span class="cook-chev">&#9654;</span>
-                </div>
-                <div class="cook-body">
-                    <div class="cook-recipe">
-                        <div class="cook-recipe-nm">
-                            ${
-
-
-
-
-
-        r.url ? `<a href="${r.url}" target="_blank" class="cook-url">View original &#8599;</a>` : ''}
-                            <button onclick="startCookMode('${r.id}')" style="padding:4px 12px;background:var(--sage);color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;font-family:inherit;margin-left:auto">Cook &#9654;</button>
+                    <div class="cook-day">
+                        <div class="cook-day-hd" onclick="toggleCookDay(this)">
+                            <div style="display:flex;flex-direction:column;gap:2px;flex:1">
+                                <span class="cook-day-nm">${r.name}</span>
+                                <span style="font-size:11px;color:var(--ink-3);font-weight:400;text-transform:none;letter-spacing:0">${day}</span>
+                            </div>
+                            <span class="cook-chev">&#9654;</span>
                         </div>
-                        <div style="font-size:11px;font-weight:600;color:var(--ink-2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Ingredients</div>
-                        <ul style="list-style:disc;padding-left:18px;margin-bottom:14px">
-                            ${
-
-
-        r.ingredients.map(i => `<li style="font-size:14px;margin-bottom:3px">${i}</li>`).join('')}
-                        </ul>
-                        <div style="font-size:11px;font-weight:600;color:var(--ink-2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Instructions</div>
-                        <ol class="step-list">
-                            ${
-
-
-        r.instructions.map((s, i) => `<li class="step-item"><span class="step-n">${i + 1}</span><span class="step-txt">${s}</span></li>`).join('')}
-                        </ol>
-                    </div>
-                </div>
-            </div>`
-
-
-
-        ).join('');
+                        <div class="cook-body">
+                            <div class="cook-recipe">
+                                <div class="cook-recipe-nm">
+                                    ${r.url ? `<a href="${r.url}" target="_blank" class="cook-url">View original &#8599;</a>` : ''}
+                                    <button onclick="startCookMode('${r.id}')" style="padding:4px 12px;background:var(--sage);color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;font-family:inherit;margin-left:auto">Cook &#9654;</button>
+                                </div>
+                                <div style="font-size:11px;font-weight:600;color:var(--ink-2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Ingredients</div>
+                                <ul style="list-style:disc;padding-left:18px;margin-bottom:14px">
+                                    ${r.ingredients.map(i => `<li style="font-size:14px;margin-bottom:3px">${i}</li>`).join('')}
+                                </ul>
+                                <div style="font-size:11px;font-weight:600;color:var(--ink-2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Instructions</div>
+                                <ol class="step-list">
+                                    ${r.instructions.map((s, i) => `<li class="step-item"><span class="step-n">${i + 1}</span><span class="step-txt">${s}</span></li>`).join('')}
+                                </ol>
+                            </div>
+                        </div>
+                    </div>`).join('');
     }
 
     function toggleCookDay(hd) {
@@ -3168,20 +3172,16 @@
             // Ghost element that follows the mouse
             const ghost = document.createElement('div');
             ghost.style.cssText = `position:fixed;z-index:9999;pointer-events:none;
-                background:#431f51;color:#fff;border-radius:6px;padding:5px 10px;
-                font-size:13px;font-family:inherit;box-shadow:0 2px 8px rgba(0,0,0,.2);
-                white-space:nowrap;opacity:0.75;`
-
-
-            ;
+                            background:#431f51;color:#fff;border-radius:6px;padding:5px 10px;
+                            font-size:13px;font-family:inherit;box-shadow:0 2px 8px rgba(0,0,0,.2);
+                            white-space:nowrap;opacity:0.75;`;
             ghost.textContent = row.querySelector('input') ? row.querySelector('input').value : row.textContent.trim().replace(/[↕✕]/g, '').trim();
             document.body.appendChild(ghost);
 
             // Indicator line — fixed to viewport but sized to container width
             const line = document.createElement('div');
             line.style.cssText = `position:fixed;height:2px;background:#431f51;
-                border-radius:2px;pointer-events:none;z-index:9998;display:none;`
-            ;
+                            border-radius:2px;pointer-events:none;z-index:9998;display:none;`;
             document.body.appendChild(line);
 
             // Set line width/position to match container
@@ -3277,15 +3277,12 @@
         const cats = allCats();
         const container = document.getElementById('cat-list');
         container.innerHTML = cats.map((c, i) => `
-            <div class="reorder-row" data-idx="${i}"
-                style="display:flex;align-items:center;padding:8px 6px;border-bottom:1px solid var(--border);gap:10px;border-radius:4px">
-                <span class="reorder-handle" style="color:var(--ink-3);font-size:15px;cursor:grab;user-select:none;padding:0 2px">&#8597;</span>
-                <span style="flex:1;font-size:14px">${
-
-        c}</span>
-                ${customCats.includes(c) ? `<button onclick="deleteCat('${c}')" style="font-size:12px;color:var(--terra);background:none;border:none;cursor:pointer;font-family:inherit;padding:2px 6px">Remove</button>` : `<span style="font-size:11px;color:var(--ink-3)">built-in</span>`}
-            </div>`
-        ).join('');
+                    <div class="reorder-row" data-idx="${i}"
+                        style="display:flex;align-items:center;padding:8px 6px;border-bottom:1px solid var(--border);gap:10px;border-radius:4px">
+                        <span class="reorder-handle" style="color:var(--ink-3);font-size:15px;cursor:grab;user-select:none;padding:0 2px">&#8597;</span>
+                        <span style="flex:1;font-size:14px">${c}</span>
+                        ${customCats.includes(c) ? `<button onclick="deleteCat('${c}')" style="font-size:12px;color:var(--terra);background:none;border:none;cursor:pointer;font-family:inherit;padding:2px 6px">Remove</button>` : `<span style="font-size:11px;color:var(--ink-3)">built-in</span>`}
+                    </div>`).join('');
         initReorderDrag(container, 'cat');
     }
 
@@ -3474,10 +3471,9 @@
             const hasMeals = (plan[d] || []).length > 0;
             const isSelected = d === mobileSelectedDay;
             return `<button class="mobile-day-pill${isSelected ? ' selected' : ''}" onclick="selectMobileDay('${d}')">
-                <span class="mobile-day-pill-label">${dayInitials[d]}</span>
-                <span class="mobile-day-pill-dot${hasMeals ? ' has-meals' : ''}"></span>
-            </button>`
-            ;
+                            <span class="mobile-day-pill-label">${dayInitials[d]}</span>
+                            <span class="mobile-day-pill-dot${hasMeals ? ' has-meals' : ''}"></span>
+                        </button>`;
         }).join('');
 
         // Also render the full week panel calendar
@@ -3488,31 +3484,26 @@
                 if (!r)
                     return '';
                 return `<div class="meal-chip">
-                    <span class="meal-chip-name">${r.name}</span>
-                    <button class="chip-rm" onclick="rmMeal('${d}',${i})">&#215;</button>
-                </div>`
-                ;
+                                    <span class="meal-chip-name" onclick="openView('${r.id}')">${r.name}</span>
+                                    <button class="chip-rm" onclick="rmMeal('${d}',${i})">&#215;</button>
+                                </div>`;
             }).join('');
             const note = dayNotes[d] || '';
             const isStart = d === startDay;
             return `<div class="day-slot" style="margin-bottom:8px">
-                <div class="day-lbl">
-                    <button class="day-lbl-star${
-            isStart ? ' active' : ''}" onclick="setStartDay('${d}')" title="Start week on ${d}">&#9733;</button>
-                    <span>${d}</span>
-                    <button class="day-lbl-edit" onclick="toggleDayNote('${d}')" title="Add note">&#9998;</button>
-                </div>
-                ${
-            note ? `<div id="note-display-${d}" class="day-note">${note}</div>` : `<div id="note-display-${d}" class="day-note" style="display:none">${note}</div>`}
-                <input id="note-input-${d}" class="day-note-input" type="text" placeholder="e.g. birthday dinner out..."
-                    style="display:none" value="${note.replace(/"/g, '&quot;')}"
-                    onblur="saveDayNote('${d}')"
-                    onkeydown="if(event.key==='Enter'||event.key==='Escape')this.blur()">
-                ${
-            chips}
-                ${meals.length === 0 ? `<div style="font-size:11px;color:rgba(255,255,255,.25);font-style:italic">No meals planned</div>` : ''}
-            </div>`
-            ;
+                            <div class="day-lbl">
+                                <button class="day-lbl-star${isStart ? ' active' : ''}" onclick="setStartDay('${d}')" title="Start week on ${d}">&#9733;</button>
+                                <span>${d}</span>
+                                <button class="day-lbl-edit" onclick="toggleDayNote('${d}')" title="Add note">&#9998;</button>
+                            </div>
+                            ${note ? `<div id="note-display-${d}" class="day-note">${note}</div>` : `<div id="note-display-${d}" class="day-note" style="display:none">${note}</div>`}
+                            <input id="note-input-${d}" class="day-note-input" type="text" placeholder="e.g. birthday dinner out..."
+                                style="display:none" value="${note.replace(/"/g, '&quot;')}"
+                                onblur="saveDayNote('${d}')"
+                                onkeydown="if(event.key==='Enter'||event.key==='Escape')this.blur()">
+                            ${chips}
+                            ${meals.length === 0 ? `<div style="font-size:11px;color:rgba(255,255,255,.25);font-style:italic">No meals planned</div>` : ''}
+                        </div>`;
         }).join('');
     }
 
