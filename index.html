@@ -1617,6 +1617,16 @@
     };
     const fbApp = firebase.initializeApp(firebaseConfig);
     const db = fbApp.firestore();
+    // Enable offline caching — app loads from IndexedDB on repeat visits
+    // and syncs with Firestore in the background
+    db.enablePersistence({
+        synchronizeTabs: false
+    }).catch(err => {
+        // failed-precondition = multiple tabs open (only one can use persistence)
+        // unimplemented = browser doesn't support it
+        // Either way the app still works, just without offline caching
+        console.warn('Firestore persistence unavailable:', err.code);
+    });
 
     // ── CONSTANTS ────────────────────────────────────────────────
     const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
@@ -1866,7 +1876,7 @@
     }
 
     // ── FIREBASE ─────────────────────────────────────────────────
-    async function loadData() {
+    async function loadData(retryCount=0) {
         showStatus('Loading...');
         try {
             const recipesSnap = await db.collection('recipes').get();
@@ -1893,11 +1903,19 @@
                     AISLES = s.aisles;
             }
             showStatus('');
+            renderAll();
+            restoreUIState();
         } catch (e) {
             console.error('Load error:', e);
-            showError(`Firebase error: ${e.code || e.message}. Check Firestore rules and connection.`);
+            if (retryCount < 2) {
+                // Auto-retry up to 2 times with a short delay
+                showStatus('Retrying...');
+                setTimeout(() => loadData(retryCount + 1), 1500);
+            } else {
+                showError(`Firebase error: ${e.code || e.message}. Check Firestore rules and connection.`);
+                renderAll();
+            }
         }
-        renderAll();
     }
 
     function saveSettings() {
@@ -3340,6 +3358,7 @@
         cmRunning = false;
         document.getElementById('cook-mode').classList.remove('hide');
         renderCookMode();
+        saveCookState();
     }
 
     function closeCookMode() {
@@ -3347,6 +3366,9 @@
         cmRunning = false;
         cmRecipe = null;
         document.getElementById('cook-mode').classList.add('hide');
+        try {
+            localStorage.removeItem('mep_cook');
+        } catch (e) {}
     }
 
     function renderCookMode() {
@@ -3389,6 +3411,7 @@
         clearInterval(cmInterval);
         cmRunning = false;
         renderCookMode();
+        saveCookState();
     }
 
     function toggleTimer() {
@@ -3440,6 +3463,9 @@
             renderShopping();
         if (name === 'cooking')
             renderCooking();
+        try {
+            localStorage.setItem('mep_tab', name);
+        } catch (e) {}
     }
 
     // ── MOBILE WEEK STRIP ─────────────────────────────────────────
@@ -3559,6 +3585,57 @@
         checkMobile();
         renderGrid();
     });
+
+    // ── UI STATE PERSISTENCE ──────────────────────────────────────
+    function saveCookState() {
+        if (!cmRecipe)
+            return;
+        try {
+            localStorage.setItem('mep_cook', JSON.stringify({
+                id: cmRecipe.id,
+                step: cmStep,
+                ts: Date.now()
+            }));
+        } catch (e) {}
+    }
+
+    function restoreUIState() {
+        try {
+            // Restore active tab
+            const savedTab = localStorage.getItem('mep_tab');
+            if (savedTab && savedTab !== 'planning') {
+                const btn = document.querySelector(`.nav-tab[onclick*="'${savedTab}'"]`);
+                if (btn)
+                    switchTab(savedTab, btn);
+            }
+            // Restore cook mode if it was active within the last 4 hours
+            const cookStr = localStorage.getItem('mep_cook');
+            if (cookStr) {
+                const {id, step, ts} = JSON.parse(cookStr);
+                const age = Date.now() - (ts || 0);
+                if (age < 4 * 60 * 60 * 1000) {
+                    const r = R.find(x => x.id === id);
+                    if (r) {
+                        // Navigate to cooking tab first
+                        const cookBtn = document.querySelector(`.nav-tab[onclick*="'cooking'"]`);
+                        if (cookBtn)
+                            switchTab('cooking', cookBtn);
+                        // Restore cook mode at saved step
+                        cmRecipe = r;
+                        cmStep = step || 0;
+                        clearInterval(cmInterval);
+                        cmRunning = false;
+                        document.getElementById('cook-mode').classList.remove('hide');
+                        renderCookMode();
+                    }
+                } else {
+                    localStorage.removeItem('mep_cook');
+                }
+            }
+        } catch (e) {
+            console.warn('Could not restore UI state:', e);
+        }
+    }
 
     // Initialize — checkMobile first so isMobile is set before loadData renders
     checkMobile();
