@@ -516,6 +516,18 @@
         color: #fff
     }
 
+    .shop-layout {
+        display: grid;
+        grid-template-columns: 360px 1fr;
+        height: calc(100vh - 52px);
+        overflow: hidden
+    }
+
+    .shop-layout .shop-wrap {
+        overflow-y: auto;
+        height: 100%
+    }
+
     .shop-wrap {
         max-width: 580px;
         margin: 0 auto;
@@ -1406,6 +1418,12 @@
             flex: 0 0 110px
         }
 
+        .shop-layout {
+            display: block;
+            height: auto;
+            overflow: visible
+        }
+
         .shop-wrap {
             padding: 16px 14px
         }
@@ -1488,13 +1506,24 @@
     </div>
 
     <div id="tab-shopping" class="tab">
-        <div class="shop-wrap">
-            <div class="shop-head">
-                <span class="shop-title">Shopping List</span>
-                <button class="btn-sm" onclick="openAisleModal()">Manage aisles</button>
-                <button class="btn-sm" onclick="clearChecked()">Clear checked</button>
+        <div class="shop-layout">
+            <aside class="sidebar">
+                <div class="sidebar-head">
+                    <div class="sidebar-title">This Week</div>
+                </div>
+                <div class="cal-days" id="cal-days-shop"></div>
+                <div class="sidebar-foot">
+                    <button class="btn-reset" onclick="resetPlan()">Reset meal plan</button>
+                </div>
+            </aside>
+            <div class="shop-wrap">
+                <div class="shop-head">
+                    <span class="shop-title">Shopping List</span>
+                    <button class="btn-sm" onclick="openAisleModal()">Manage aisles</button>
+                    <button class="btn-sm" onclick="clearChecked()">Clear checked</button>
+                </div>
+                <div id="shop-list"></div>
             </div>
-            <div id="shop-list"></div>
         </div>
     </div>
 
@@ -2068,7 +2097,8 @@
     ];
     // Builds the display + edit markup for a day's B/L/D notes. Shared by
     // renderCal() (desktop sidebar) and renderMobileStrip() (mobile panel).
-    function noteFieldsHtml(d) {
+    function noteFieldsHtml(d, prefix) {
+        prefix = prefix || '';
         const noteObj = dayNotes[d] || {};
         const lines = DAY_NOTE_MEALS
         .filter(([key]) => noteObj[key])
@@ -2077,62 +2107,66 @@
         const fields = DAY_NOTE_MEALS.map(([key, placeholder]) => {
             const val = (noteObj[key] || '').replace(/"/g, '&quot;');
             return `<div class="day-note-field">
-                                            <span class="day-note-tag">${key}</span>
-                                            <input class="day-note-input" id="note-input-${d}-${key}" type="text" placeholder="${placeholder}" value="${val}"
-                                                onkeydown="if(event.key==='Enter'){dayNoteFieldEnter('${d}','${key}')}else if(event.key==='Escape'){this.blur()}">
-                                        </div>`;
+                                                        <span class="day-note-tag">${key}</span>
+                                                        <input class="day-note-input" id="${prefix}note-input-${d}-${key}" type="text" placeholder="${placeholder}" value="${val}"
+                                                            onkeydown="if(event.key==='Enter'){dayNoteFieldEnter('${d}','${key}','${prefix}')}else if(event.key==='Escape'){this.blur()}">
+                                                    </div>`;
         }).join('');
-        return `<div id="note-display-${d}" class="day-note-display" style="${lines ? '' : 'display:none'}">${lines}</div>
-                                    <div id="note-edit-${d}" class="day-note-edit" style="display:none" onfocusout="handleNoteFocusOut('${d}',event)">
-                                        ${fields}
-                                    </div>`;
+        return `<div id="${prefix}note-display-${d}" class="day-note-display" style="${lines ? '' : 'display:none'}">${lines}</div>
+                                            <div id="${prefix}note-edit-${d}" class="day-note-edit" style="display:none" onfocusout="handleNoteFocusOut('${d}',event,'${prefix}')">
+                                                ${fields}
+                                            </div>`;
     }
-    function toggleDayNote(day) {
-        const editEl = document.getElementById('note-edit-' + day);
-        const dispEl = document.getElementById('note-display-' + day);
+    function toggleDayNote(day, prefix) {
+        prefix = prefix || '';
+        const editEl = document.getElementById(prefix + 'note-edit-' + day);
+        const dispEl = document.getElementById(prefix + 'note-display-' + day);
         if (!editEl)
             return;
         if (editEl.style.display === 'none') {
             dispEl.style.display = 'none';
             editEl.style.display = 'flex';
-            const first = document.getElementById('note-input-' + day + '-B');
+            const first = document.getElementById(prefix + 'note-input-' + day + '-B');
             if (first) {
                 first.focus();
                 first.select();
             }
         } else {
-            saveDayNote(day);
+            saveDayNote(day, prefix);
         }
     }
     // Moves focus to the next meal field on Enter, or blurs (closing/saving) on the last one.
-    function dayNoteFieldEnter(day, field) {
+    function dayNoteFieldEnter(day, field, prefix) {
+        prefix = prefix || '';
         const order = DAY_NOTE_MEALS.map(([key]) => key);
         const next = order[order.indexOf(field) + 1];
-        const nextEl = next && document.getElementById('note-input-' + day + '-' + next);
+        const nextEl = next && document.getElementById(prefix + 'note-input-' + day + '-' + next);
         if (nextEl) {
             nextEl.focus();
             nextEl.select();
         } else {
-            document.getElementById('note-input-' + day + '-' + field).blur();
+            document.getElementById(prefix + 'note-input-' + day + '-' + field).blur();
         }
     }
     // Only save/close once focus leaves the whole B/L/D group, not when it
     // just moves between the three fields.
-    function handleNoteFocusOut(day, e) {
-        const editEl = document.getElementById('note-edit-' + day);
+    function handleNoteFocusOut(day, e, prefix) {
+        prefix = prefix || '';
+        const editEl = document.getElementById(prefix + 'note-edit-' + day);
         if (!editEl)
             return;
         if (e.relatedTarget && editEl.contains(e.relatedTarget))
             return;
-        saveDayNote(day);
+        saveDayNote(day, prefix);
     }
-    function saveDayNote(day) {
-        const editEl = document.getElementById('note-edit-' + day);
+    function saveDayNote(day, prefix) {
+        prefix = prefix || '';
+        const editEl = document.getElementById(prefix + 'note-edit-' + day);
         if (!editEl)
             return;
         const obj = {};
         DAY_NOTE_MEALS.forEach(([key]) => {
-            const el = document.getElementById('note-input-' + day + '-' + key);
+            const el = document.getElementById(prefix + 'note-input-' + day + '-' + key);
             const val = el ? el.value.trim() : '';
             if (val)
                 obj[key] = val;
@@ -2145,33 +2179,42 @@
         renderCal();
     }
 
+    // Builds one day's slot markup. prefix keeps element ids unique when the
+    // same calendar is rendered into more than one container (planning tab
+    // sidebar + shopping tab sidebar).
+    function dayCardHtml(d, prefix) {
+        prefix = prefix || '';
+        const meals = plan[d] || [];
+        const chips = meals.map((id, i) => {
+            const r = R.find(x => x.id === id);
+            if (!r)
+                return '';
+            return `<div class="meal-chip" draggable="true" ondragstart="calDragStart('${d}',${i},event)" ondragend="calDragEnd()">
+                                                            <span class="meal-chip-name" onclick="openView('${r.id}')">${r.name}</span>
+                                                            <button class="chip-rm" onclick="rmMeal('${d}',${i})">&#215;</button>
+                                                        </div>`;
+        }).join('');
+        const isStart = d === startDay;
+        return `<div class="day-slot" id="${prefix}ds-${d}"
+                                            ondragover="event.preventDefault();this.classList.add('over')"
+                                            ondragleave="this.classList.remove('over')"
+                                            ondrop="onDrop('${d}',event)">
+                                            <div class="day-lbl">
+                                                <button class="day-lbl-star${isStart ? ' active' : ''}" onclick="setStartDay('${d}')" title="Start week on ${d}">&#9733;</button>
+                                                <span>${d}</span>
+                                                <button class="day-lbl-edit" onclick="toggleDayNote('${d}','${prefix}')" title="Add note">&#9998;</button>
+                                            </div>
+                                            ${noteFieldsHtml(d, prefix)}
+                                            ${chips}
+                                        </div>`;
+    }
+
     function renderCal() {
         const orderedDays = getOrderedDays();
-        document.getElementById('cal-days').innerHTML = orderedDays.map(d => {
-            const meals = plan[d] || [];
-            const chips = meals.map((id, i) => {
-                const r = R.find(x => x.id === id);
-                if (!r)
-                    return '';
-                return `<div class="meal-chip" draggable="true" ondragstart="calDragStart('${d}',${i},event)" ondragend="calDragEnd()">
-                                                    <span class="meal-chip-name" onclick="openView('${r.id}')">${r.name}</span>
-                                                    <button class="chip-rm" onclick="rmMeal('${d}',${i})">&#215;</button>
-                                                </div>`;
-            }).join('');
-            const isStart = d === startDay;
-            return `<div class="day-slot" id="ds-${d}"
-                                        ondragover="event.preventDefault();this.classList.add('over')"
-                                        ondragleave="this.classList.remove('over')"
-                                        ondrop="onDrop('${d}',event)">
-                                        <div class="day-lbl">
-                                            <button class="day-lbl-star${isStart ? ' active' : ''}" onclick="setStartDay('${d}')" title="Start week on ${d}">&#9733;</button>
-                                            <span>${d}</span>
-                                            <button class="day-lbl-edit" onclick="toggleDayNote('${d}')" title="Add note">&#9998;</button>
-                                        </div>
-                                        ${noteFieldsHtml(d)}
-                                        ${chips}
-                                    </div>`;
-        }).join('');
+        document.getElementById('cal-days').innerHTML = orderedDays.map(d => dayCardHtml(d, '')).join('');
+        const shopCal = document.getElementById('cal-days-shop');
+        if (shopCal)
+            shopCal.innerHTML = orderedDays.map(d => dayCardHtml(d, 'shop-')).join('');
         if (isMobile)
             renderMobileStrip();
     }
@@ -2195,26 +2238,26 @@
         const rest = Object.keys(grouped).filter(c => !orderedCats.includes(c));
         const plannedIds = new Set(Object.values(plan).flat());
         el.innerHTML = [...orderedCats, ...rest].map(cat => `
-                            <div class="cat-section">
-                                <div class="cat-title" onclick="toggleCat(this)">
-                                    <span>${cat}</span><span class="cat-chev">&#9654;</span>
-                                </div>
-                                <div class="recipe-cards">
-                                    ${grouped[cat].map(r => `
-                                        <div class="rcard${plannedIds.has(r.id) ? ' planned' : ''}" draggable="true"
-                                            ondragstart="dragId='${r.id}'" ondragend="dragId=null"
-                                            ontouchstart="touchDragStart(event,'${r.id}')"
-                                            ontouchmove="touchDragMove(event)"
-                                            ontouchend="touchDragEnd(event)"
-                                            onclick="if(isMobile){mobileAddRecipe('${r.id}')}else{openView('${r.id}')}">
-                                            <div class="rcard-acts">
-                                                <button class="icon-btn" onclick="event.stopPropagation();openView('${r.id}')" title="View">&#9432;</button>
-                                            </div>
-                                            <div class="rcard-name">${r.name}</div>
-                                            ${isMobile && mobileSelectedDay ? `<div class="rcard-add-hint">Tap to add to ${mobileSelectedDay}</div>` : ''}
-                                        </div>`).join('')}
-                                </div>
-                            </div>`).join('');
+                                    <div class="cat-section">
+                                        <div class="cat-title" onclick="toggleCat(this)">
+                                            <span>${cat}</span><span class="cat-chev">&#9654;</span>
+                                        </div>
+                                        <div class="recipe-cards">
+                                            ${grouped[cat].map(r => `
+                                                <div class="rcard${plannedIds.has(r.id) ? ' planned' : ''}" draggable="true"
+                                                    ondragstart="dragId='${r.id}'" ondragend="dragId=null"
+                                                    ontouchstart="touchDragStart(event,'${r.id}')"
+                                                    ontouchmove="touchDragMove(event)"
+                                                    ontouchend="touchDragEnd(event)"
+                                                    onclick="if(isMobile){mobileAddRecipe('${r.id}')}else{openView('${r.id}')}">
+                                                    <div class="rcard-acts">
+                                                        <button class="icon-btn" onclick="event.stopPropagation();openView('${r.id}')" title="View">&#9432;</button>
+                                                    </div>
+                                                    <div class="rcard-name">${r.name}</div>
+                                                    ${isMobile && mobileSelectedDay ? `<div class="rcard-add-hint">Tap to add to ${mobileSelectedDay}</div>` : ''}
+                                                </div>`).join('')}
+                                        </div>
+                                    </div>`).join('');
     }
 
     // ── DRAG & DROP ───────────────────────────────────────────────
@@ -2256,7 +2299,7 @@
 
     function onDrop(day, e) {
         e.preventDefault();
-        document.getElementById('ds-' + day).classList.remove('over');
+        e.currentTarget.classList.remove('over');
         if (calDragSrc) {
             const {day: srcDay, idx: srcIdx} = calDragSrc;
             calDragSrc = null;
@@ -2365,7 +2408,7 @@
             const el = document.elementFromPoint(touch.clientX, touch.clientY);
             const slot = el ? el.closest('.day-slot') : null;
             if (slot) {
-                const day = slot.id.replace('ds-', '');
+                const day = slot.id.replace(/^(shop-)?ds-/, '');
                 if (!plan[day])
                     plan[day] = [];
                 plan[day].push(touchDragId);
@@ -2689,17 +2732,17 @@
         const all = [...items, ...man];
         if (!all.length) {
             el.innerHTML = `
-                                    <div class="add-row-wrap" style="margin-bottom:16px">
-                                        <div id="autocomplete-list" class="autocomplete-list" style="display:none"></div>
-                                        <div class="add-row">
-                                            <input class="add-inp" id="add-inp" style="font-size:16px" placeholder="Item or 'item: aisle'..."
-                                                oninput="showAutocomplete()"
-                                                onkeydown="if(event.key==='Enter'){addManual()}"
-                                                onblur="setTimeout(()=>{document.getElementById('autocomplete-list').style.display='none'},200)">
-                                            <button class="btn-add" onclick="addManual()">Add</button>
-                                        </div>
-                                    </div>
-                                    <div class="empty">Add recipes to your meal plan to generate a shopping list.</div>`;
+                                                <div class="add-row-wrap" style="margin-bottom:16px">
+                                                    <div id="autocomplete-list" class="autocomplete-list" style="display:none"></div>
+                                                    <div class="add-row">
+                                                        <input class="add-inp" id="add-inp" style="font-size:16px" placeholder="Item or 'item: aisle'..."
+                                                            oninput="showAutocomplete()"
+                                                            onkeydown="if(event.key==='Enter'){addManual()}"
+                                                            onblur="setTimeout(()=>{document.getElementById('autocomplete-list').style.display='none'},200)">
+                                                        <button class="btn-add" onclick="addManual()">Add</button>
+                                                    </div>
+                                                </div>
+                                                <div class="empty">Add recipes to your meal plan to generate a shopping list.</div>`;
             return;
         }
         const unchecked = all.filter(x => !checked[x.key]);
@@ -2729,37 +2772,37 @@
         const aisleHTML = aisleOrder.filter(a => byAisle[a]).map(aisle => {
             const its = byAisle[aisle];
             return `<div class="aisle-sec">
-                                        <div class="aisle-hd" style="cursor:default">
-                                            <span class="aisle-nm">${aisle}</span>
-                                            <span class="aisle-cnt">${its.length} item${its.length !== 1 ? 's' : ''}</span>
-                                        </div>
-                                        <div class="aisle-items">${its.map(item => renderShopItem(item)).join('')}</div>
-                                    </div>`;
+                                                    <div class="aisle-hd" style="cursor:default">
+                                                        <span class="aisle-nm">${aisle}</span>
+                                                        <span class="aisle-cnt">${its.length} item${its.length !== 1 ? 's' : ''}</span>
+                                                    </div>
+                                                    <div class="aisle-items">${its.map(item => renderShopItem(item)).join('')}</div>
+                                                </div>`;
         }).join('');
         const checkedHTML = checkedItems.length ? `
-                            <div class="aisle-sec" style="margin-top:16px">
-                                <div class="aisle-hd" onclick="toggleAisle(this)" style="cursor:pointer">
-                                    <span class="aisle-nm" style="color:var(--ink-3)">Already have it</span>
-                                    <span class="aisle-cnt">${checkedItems.length} item${checkedItems.length !== 1 ? 's' : ''}</span>
-                                    <span class="aisle-chev${checkedSectionOpen ? ' open' : ''}">&#9654;</span>
-                                </div>
-                                <div class="aisle-items" style="${checkedSectionOpen ? '' : 'display:none'}">${checkedItems.map(item => renderShopItem(item)).join('')}</div>
-                            </div>` : '';
+                                    <div class="aisle-sec" style="margin-top:16px">
+                                        <div class="aisle-hd" onclick="toggleAisle(this)" style="cursor:pointer">
+                                            <span class="aisle-nm" style="color:var(--ink-3)">Already have it</span>
+                                            <span class="aisle-cnt">${checkedItems.length} item${checkedItems.length !== 1 ? 's' : ''}</span>
+                                            <span class="aisle-chev${checkedSectionOpen ? ' open' : ''}">&#9654;</span>
+                                        </div>
+                                        <div class="aisle-items" style="${checkedSectionOpen ? '' : 'display:none'}">${checkedItems.map(item => renderShopItem(item)).join('')}</div>
+                                    </div>` : '';
         const clearManualsBtn = manuals.length ? `
-                            <div style="text-align:center;margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
-                                <button class="btn-sm" onclick="clearAllManuals()" style="color:var(--terra);border-color:var(--terra)">Clear all added items</button>
-                            </div>` : '';
+                                    <div style="text-align:center;margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
+                                        <button class="btn-sm" onclick="clearAllManuals()" style="color:var(--terra);border-color:var(--terra)">Clear all added items</button>
+                                    </div>` : '';
         const addRowHTML = `
-                            <div class="add-row-wrap" style="margin-bottom:16px">
-                                <div id="autocomplete-list" class="autocomplete-list" style="display:none"></div>
-                                <div class="add-row">
-                                    <input class="add-inp" id="add-inp" style="font-size:16px" placeholder="Item or 'item: aisle'..."
-                                        oninput="showAutocomplete()"
-                                        onkeydown="if(event.key==='Enter'){addManual()}"
-                                        onblur="setTimeout(()=>{document.getElementById('autocomplete-list').style.display='none'},200)">
-                                    <button class="btn-add" onclick="addManual()">Add</button>
-                                </div>
-                            </div>`;
+                                    <div class="add-row-wrap" style="margin-bottom:16px">
+                                        <div id="autocomplete-list" class="autocomplete-list" style="display:none"></div>
+                                        <div class="add-row">
+                                            <input class="add-inp" id="add-inp" style="font-size:16px" placeholder="Item or 'item: aisle'..."
+                                                oninput="showAutocomplete()"
+                                                onkeydown="if(event.key==='Enter'){addManual()}"
+                                                onblur="setTimeout(()=>{document.getElementById('autocomplete-list').style.display='none'},200)">
+                                            <button class="btn-add" onclick="addManual()">Add</button>
+                                        </div>
+                                    </div>`;
         el.innerHTML = addRowHTML + aisleHTML + checkedHTML + clearManualsBtn;
     }
 
@@ -2768,13 +2811,13 @@
         const recipeHint = item.recipes && item.recipes.length
         ? `<div style="font-size:11px;color:var(--ink-3);margin-top:2px;line-height:1.3">${item.recipes.join(', ')}</div>` : '';
         return `<div class="shop-item${ck ? ' done' : ''}">
-                            <div class="chk${ck ? ' on' : ''}" onclick="toggleChk('${item.key}',this,event)">${ck ? '&#10003;' : ''}</div>
-                            <div style="flex:1;min-width:0">
-                                <div class="item-name">${item.display}</div>${recipeHint}
-                            </div>
-                            <button class="aisle-edit-btn" onclick="openShopItemEdit(${JSON.stringify(item).replace(/"/g, '&quot;')})" title="Edit">&#9998;</button>
-                            ${item.mid !== undefined ? `<button class="aisle-edit-btn" style="color:var(--terra)" onclick="deleteManual('${item.mid}')">&#10005;</button>` : ''}
-                        </div>`;
+                                    <div class="chk${ck ? ' on' : ''}" onclick="toggleChk('${item.key}',this,event)">${ck ? '&#10003;' : ''}</div>
+                                    <div style="flex:1;min-width:0">
+                                        <div class="item-name">${item.display}</div>${recipeHint}
+                                    </div>
+                                    <button class="aisle-edit-btn" onclick="openShopItemEdit(${JSON.stringify(item).replace(/"/g, '&quot;')})" title="Edit">&#9998;</button>
+                                    ${item.mid !== undefined ? `<button class="aisle-edit-btn" style="color:var(--terra)" onclick="deleteManual('${item.mid}')">&#10005;</button>` : ''}
+                                </div>`;
     }
 
     function toggleAisle(hd) {
@@ -2885,9 +2928,9 @@
             }
             list.innerHTML = aisleMatches.map(a =>
             `<div class="autocomplete-item" onmousedown="selectAisleAutocomplete('${a.replace(/'/g, "&#39;")}')">
-                                            <span style="font-size:13px">&#128204;</span>
-                                            <span>${a}</span>
-                                        </div>`
+                                                        <span style="font-size:13px">&#128204;</span>
+                                                        <span>${a}</span>
+                                                    </div>`
             ).join('');
             list.style.display = 'block';
             return;
@@ -2908,9 +2951,9 @@
         }
         list.innerHTML = matches.map(p =>
         `<div class="autocomplete-item" onmousedown="selectAutocomplete('${p.name.replace(/'/g, "&#39;")}')">
-                                ${p.name}
-                                ${p.aisle ? `<span style="font-size:11px;color:var(--ink-3);margin-left:6px">${p.aisle}</span>` : ''}
-                            </div>`
+                                        ${p.name}
+                                        ${p.aisle ? `<span style="font-size:11px;color:var(--ink-3);margin-left:6px">${p.aisle}</span>` : ''}
+                                    </div>`
         ).join('');
         list.style.display = 'block';
     }
@@ -3052,13 +3095,13 @@
         container.innerHTML = AISLES.map((a, i) => {
             const isDefault = defaultAisles.includes(a);
             return `<div class="reorder-row" data-idx="${i}"
-                                        style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border)">
-                                        <span class="reorder-handle" style="color:var(--ink-3);font-size:15px;cursor:grab;flex-shrink:0;padding:0 2px;user-select:none">&#8597;</span>
-                                        <input class="fi" style="flex:1;padding:5px 8px;font-size:13px" value="${a.replace(/"/g, '&quot;')}"
-                                            onblur="renameAisle(${i}, this.value)"
-                                            onkeydown="if(event.key==='Enter')this.blur()">
-                                        ${isDefault ? `<span style="font-size:11px;color:var(--ink-3);white-space:nowrap;flex-shrink:0">built-in</span>` : `<button onclick="deleteAisle(${i})" style="background:none;border:none;cursor:pointer;color:var(--terra);font-size:16px;padding:0;line-height:1;flex-shrink:0" title="Remove">&#10005;</button>`}
-                                    </div>`;
+                                                    style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border)">
+                                                    <span class="reorder-handle" style="color:var(--ink-3);font-size:15px;cursor:grab;flex-shrink:0;padding:0 2px;user-select:none">&#8597;</span>
+                                                    <input class="fi" style="flex:1;padding:5px 8px;font-size:13px" value="${a.replace(/"/g, '&quot;')}"
+                                                        onblur="renameAisle(${i}, this.value)"
+                                                        onkeydown="if(event.key==='Enter')this.blur()">
+                                                    ${isDefault ? `<span style="font-size:11px;color:var(--ink-3);white-space:nowrap;flex-shrink:0">built-in</span>` : `<button onclick="deleteAisle(${i})" style="background:none;border:none;cursor:pointer;color:var(--terra);font-size:16px;padding:0;line-height:1;flex-shrink:0" title="Remove">&#10005;</button>`}
+                                                </div>`;
         }).join('');
         initReorderDrag(container, 'aisle');
     }
@@ -3141,12 +3184,12 @@
         document.getElementById('aisle-list').innerHTML = unique.map(v => {
             const cur = v.aisle;
             return `<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border)">
-                                        <span style="flex:1;font-size:14px">${v.display}</span>
-                                        <select style="font-size:12px;padding:3px 7px;border:1px solid var(--border);border-radius:4px;background:var(--cream);color:var(--ink);font-family:inherit;outline:none"
-                                            onchange="aisleOv['${v.key}']=this.value;saveSettings()">
-                                            ${AISLES.map(a => `<option value="${a}"${a === cur ? ' selected' : ''}>${a}</option>`).join('')}
-                                        </select>
-                                    </div>`;
+                                                    <span style="flex:1;font-size:14px">${v.display}</span>
+                                                    <select style="font-size:12px;padding:3px 7px;border:1px solid var(--border);border-radius:4px;background:var(--cream);color:var(--ink);font-family:inherit;outline:none"
+                                                        onchange="aisleOv['${v.key}']=this.value;saveSettings()">
+                                                        ${AISLES.map(a => `<option value="${a}"${a === cur ? ' selected' : ''}>${a}</option>`).join('')}
+                                                    </select>
+                                                </div>`;
         }).join('');
         openOv('ov-aisle');
     }
@@ -3167,31 +3210,31 @@
             }));
         });
         el.innerHTML = entries.map(({day, recipe: r}) => `
-                            <div class="cook-day">
-                                <div class="cook-day-hd" onclick="toggleCookDay(this)">
-                                    <div style="display:flex;flex-direction:column;gap:2px;flex:1">
-                                        <span class="cook-day-nm">${r.name}</span>
-                                        <span style="font-size:11px;color:var(--ink-3);font-weight:400;text-transform:none;letter-spacing:0">${day}</span>
-                                    </div>
-                                    <span class="cook-chev">&#9654;</span>
-                                </div>
-                                <div class="cook-body">
-                                    <div class="cook-recipe">
-                                        <div class="cook-recipe-nm">
-                                            ${r.url ? `<a href="${r.url}" target="_blank" class="cook-url">View original &#8599;</a>` : ''}
-                                            <button onclick="startCookMode('${r.id}')" style="padding:4px 12px;background:var(--sage);color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;font-family:inherit;margin-left:auto">Cook &#9654;</button>
+                                    <div class="cook-day">
+                                        <div class="cook-day-hd" onclick="toggleCookDay(this)">
+                                            <div style="display:flex;flex-direction:column;gap:2px;flex:1">
+                                                <span class="cook-day-nm">${r.name}</span>
+                                                <span style="font-size:11px;color:var(--ink-3);font-weight:400;text-transform:none;letter-spacing:0">${day}</span>
+                                            </div>
+                                            <span class="cook-chev">&#9654;</span>
                                         </div>
-                                        <div style="font-size:11px;font-weight:600;color:var(--ink-2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Ingredients</div>
-                                        <ul style="list-style:disc;padding-left:18px;margin-bottom:14px">
-                                            ${r.ingredients.map(i => `<li style="font-size:14px;margin-bottom:3px">${i}</li>`).join('')}
-                                        </ul>
-                                        <div style="font-size:11px;font-weight:600;color:var(--ink-2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Instructions</div>
-                                        <ol class="step-list">
-                                            ${r.instructions.map((s, i) => `<li class="step-item"><span class="step-n">${i + 1}</span><span class="step-txt">${s}</span></li>`).join('')}
-                                        </ol>
-                                    </div>
-                                </div>
-                            </div>`).join('');
+                                        <div class="cook-body">
+                                            <div class="cook-recipe">
+                                                <div class="cook-recipe-nm">
+                                                    ${r.url ? `<a href="${r.url}" target="_blank" class="cook-url">View original &#8599;</a>` : ''}
+                                                    <button onclick="startCookMode('${r.id}')" style="padding:4px 12px;background:var(--sage);color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;font-family:inherit;margin-left:auto">Cook &#9654;</button>
+                                                </div>
+                                                <div style="font-size:11px;font-weight:600;color:var(--ink-2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Ingredients</div>
+                                                <ul style="list-style:disc;padding-left:18px;margin-bottom:14px">
+                                                    ${r.ingredients.map(i => `<li style="font-size:14px;margin-bottom:3px">${i}</li>`).join('')}
+                                                </ul>
+                                                <div style="font-size:11px;font-weight:600;color:var(--ink-2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Instructions</div>
+                                                <ol class="step-list">
+                                                    ${r.instructions.map((s, i) => `<li class="step-item"><span class="step-n">${i + 1}</span><span class="step-txt">${s}</span></li>`).join('')}
+                                                </ol>
+                                            </div>
+                                        </div>
+                                    </div>`).join('');
     }
 
     function toggleCookDay(hd) {
@@ -3319,16 +3362,16 @@
             // Ghost element that follows the mouse
             const ghost = document.createElement('div');
             ghost.style.cssText = `position:fixed;z-index:9999;pointer-events:none;
-                                        background:#431f51;color:#fff;border-radius:6px;padding:5px 10px;
-                                        font-size:13px;font-family:inherit;box-shadow:0 2px 8px rgba(0,0,0,.2);
-                                        white-space:nowrap;opacity:0.75;`;
+                                                    background:#431f51;color:#fff;border-radius:6px;padding:5px 10px;
+                                                    font-size:13px;font-family:inherit;box-shadow:0 2px 8px rgba(0,0,0,.2);
+                                                    white-space:nowrap;opacity:0.75;`;
             ghost.textContent = row.querySelector('input') ? row.querySelector('input').value : row.textContent.trim().replace(/[↕✕]/g, '').trim();
             document.body.appendChild(ghost);
 
             // Indicator line — fixed to viewport but sized to container width
             const line = document.createElement('div');
             line.style.cssText = `position:fixed;height:2px;background:#431f51;
-                                        border-radius:2px;pointer-events:none;z-index:9998;display:none;`;
+                                                    border-radius:2px;pointer-events:none;z-index:9998;display:none;`;
             document.body.appendChild(line);
 
             // Set line width/position to match container
@@ -3424,12 +3467,12 @@
         const cats = allCats();
         const container = document.getElementById('cat-list');
         container.innerHTML = cats.map((c, i) => `
-                            <div class="reorder-row" data-idx="${i}"
-                                style="display:flex;align-items:center;padding:8px 6px;border-bottom:1px solid var(--border);gap:10px;border-radius:4px">
-                                <span class="reorder-handle" style="color:var(--ink-3);font-size:15px;cursor:grab;user-select:none;padding:0 2px">&#8597;</span>
-                                <span style="flex:1;font-size:14px">${c}</span>
-                                ${customCats.includes(c) ? `<button onclick="deleteCat('${c}')" style="font-size:12px;color:var(--terra);background:none;border:none;cursor:pointer;font-family:inherit;padding:2px 6px">Remove</button>` : `<span style="font-size:11px;color:var(--ink-3)">built-in</span>`}
-                            </div>`).join('');
+                                    <div class="reorder-row" data-idx="${i}"
+                                        style="display:flex;align-items:center;padding:8px 6px;border-bottom:1px solid var(--border);gap:10px;border-radius:4px">
+                                        <span class="reorder-handle" style="color:var(--ink-3);font-size:15px;cursor:grab;user-select:none;padding:0 2px">&#8597;</span>
+                                        <span style="flex:1;font-size:14px">${c}</span>
+                                        ${customCats.includes(c) ? `<button onclick="deleteCat('${c}')" style="font-size:12px;color:var(--terra);background:none;border:none;cursor:pointer;font-family:inherit;padding:2px 6px">Remove</button>` : `<span style="font-size:11px;color:var(--ink-3)">built-in</span>`}
+                                    </div>`).join('');
         initReorderDrag(container, 'cat');
     }
 
@@ -3626,9 +3669,9 @@
             const hasMeals = (plan[d] || []).length > 0;
             const isSelected = d === mobileSelectedDay;
             return `<button class="mobile-day-pill${isSelected ? ' selected' : ''}" onclick="selectMobileDay('${d}')">
-                                        <span class="mobile-day-pill-label">${dayInitials[d]}</span>
-                                        <span class="mobile-day-pill-dot${hasMeals ? ' has-meals' : ''}"></span>
-                                    </button>`;
+                                                    <span class="mobile-day-pill-label">${dayInitials[d]}</span>
+                                                    <span class="mobile-day-pill-dot${hasMeals ? ' has-meals' : ''}"></span>
+                                                </button>`;
         }).join('');
 
         // Also render the full week panel calendar
@@ -3639,21 +3682,21 @@
                 if (!r)
                     return '';
                 return `<div class="meal-chip">
-                                                    <span class="meal-chip-name" onclick="openView('${r.id}')">${r.name}</span>
-                                                    <button class="chip-rm" onclick="rmMeal('${d}',${i})">&#215;</button>
-                                                </div>`;
+                                                                    <span class="meal-chip-name" onclick="openView('${r.id}')">${r.name}</span>
+                                                                    <button class="chip-rm" onclick="rmMeal('${d}',${i})">&#215;</button>
+                                                                </div>`;
             }).join('');
             const isStart = d === startDay;
             return `<div class="day-slot" style="margin-bottom:8px">
-                                        <div class="day-lbl">
-                                            <button class="day-lbl-star${isStart ? ' active' : ''}" onclick="setStartDay('${d}')" title="Start week on ${d}">&#9733;</button>
-                                            <span>${d}</span>
-                                            <button class="day-lbl-edit" onclick="toggleDayNote('${d}')" title="Add note">&#9998;</button>
-                                        </div>
-                                        ${noteFieldsHtml(d)}
-                                        ${chips}
-                                        ${meals.length === 0 ? `<div style="font-size:11px;color:rgba(255,255,255,.25);font-style:italic">No meals planned</div>` : ''}
-                                    </div>`;
+                                                    <div class="day-lbl">
+                                                        <button class="day-lbl-star${isStart ? ' active' : ''}" onclick="setStartDay('${d}')" title="Start week on ${d}">&#9733;</button>
+                                                        <span>${d}</span>
+                                                        <button class="day-lbl-edit" onclick="toggleDayNote('${d}')" title="Add note">&#9998;</button>
+                                                    </div>
+                                                    ${noteFieldsHtml(d)}
+                                                    ${chips}
+                                                    ${meals.length === 0 ? `<div style="font-size:11px;color:rgba(255,255,255,.25);font-style:italic">No meals planned</div>` : ''}
+                                                </div>`;
         }).join('');
     }
 
