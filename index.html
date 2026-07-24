@@ -516,6 +516,77 @@
         color: #fff
     }
 
+    .kid-badge {
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        border: 1.3px solid rgba(255, 255, 255, .55);
+        background: none;
+        color: rgba(255, 255, 255, .75);
+        font-size: 9px;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        padding: 0;
+        line-height: 1;
+        font-family: inherit;
+        flex-shrink: 0
+    }
+
+    .kid-badge:hover {
+        border-color: #fff;
+        color: #fff
+    }
+
+    .kid-badge.active {
+        background: var(--sage);
+        border-color: var(--sage);
+        color: #fff
+    }
+
+    .kid-filter-group {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        flex-shrink: 0
+    }
+
+    .kid-filter-badge {
+        width: 26px;
+        height: 26px;
+        border: 1.5px solid var(--border-2);
+        color: var(--ink-2);
+        font-size: 11px
+    }
+
+    .kid-filter-badge:hover {
+        border-color: var(--sage);
+        color: var(--sage)
+    }
+
+    .kid-manage-btn {
+        width: 26px;
+        height: 26px;
+        border-radius: 50%;
+        border: 1px dashed var(--border-2);
+        background: none;
+        color: var(--ink-3);
+        font-size: 11px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        font-family: inherit;
+        flex-shrink: 0
+    }
+
+    .kid-manage-btn:hover {
+        color: var(--sage);
+        border-color: var(--sage)
+    }
+
     .shop-layout {
         display: grid;
         grid-template-columns: 360px 1fr;
@@ -1000,6 +1071,73 @@
         letter-spacing: .05em;
         margin-bottom: 7px;
         margin-top: 2px
+    }
+
+    .note-toolbar {
+        display: flex;
+        gap: 4px;
+        margin-bottom: 6px
+    }
+
+    .note-tool-btn {
+        min-width: 30px;
+        height: 28px;
+        padding: 0 8px;
+        border: 1px solid var(--border-2);
+        background: var(--cream);
+        border-radius: 5px;
+        color: var(--ink-2);
+        cursor: pointer;
+        font-family: inherit;
+        font-size: 13px;
+        display: flex;
+        align-items: center;
+        justify-content: center
+    }
+
+    .note-tool-btn:hover {
+        background: var(--sage-light);
+        color: var(--sage);
+        border-color: var(--sage)
+    }
+
+    .notes-editable {
+        width: 100%;
+        min-height: 90px;
+        font-family: inherit;
+        font-size: 14px;
+        line-height: 1.5;
+        padding: 8px 11px;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        background: var(--cream);
+        color: var(--ink);
+        outline: none
+    }
+
+    .notes-editable:focus {
+        border-color: var(--sage)
+    }
+
+    .notes-editable ul {
+        padding-left: 20px;
+        margin: 4px 0
+    }
+
+    .notes-editable:empty:before {
+        content: attr(data-placeholder);
+        color: var(--ink-3)
+    }
+
+    .view-notes {
+        font-size: 14px;
+        color: var(--ink);
+        line-height: 1.6
+    }
+
+    .view-notes ul {
+        padding-left: 18px;
+        margin: 4px 0
     }/* Touch drag ghost */
 
     .touch-ghost {
@@ -1493,6 +1631,7 @@
             <div class="browser">
                 <div class="toolbar">
                     <input class="search-inp" id="srch" placeholder="Search..." oninput="renderGrid()">
+                    <div class="kid-filter-group" id="kid-filter-group"></div>
                     <select class="filter-sel" id="fcat" onchange="renderGrid()">
                         <option value="">All categories</option>
                     </select>
@@ -1546,6 +1685,10 @@
             <ul class="view-ings" id="v-ings"></ul>
             <div class="sec-lbl" style="margin-top:14px">Instructions</div>
             <ol class="step-list" id="v-steps"></ol>
+            <div id="v-notes-wrap" style="display:none">
+                <div class="sec-lbl" style="margin-top:14px">Notes</div>
+                <div class="view-notes" id="v-notes"></div>
+            </div>
             <div class="m-acts">
                 <button class="btn-cancel" onclick="closeOv('ov-view');openEdit(curViewId)">Edit recipe</button>
                 <button class="btn-save" onclick="closeOv('ov-view')">Done</button>
@@ -1579,6 +1722,16 @@
             <div class="fg">
                 <label class="fl">Instructions (one step per line)</label>
                 <textarea class="fta" id="e-steps" style="min-height:200px" placeholder="Step 1...&#10;Step 2..."></textarea>
+            </div>
+            <div class="fg">
+                <label class="fl">Notes</label>
+                <div class="note-toolbar">
+                    <button type="button" class="note-tool-btn" onmousedown="event.preventDefault()" onclick="formatNotes('bold')" title="Bold">
+                        <b>B</b>
+                    </button>
+                    <button type="button" class="note-tool-btn" onmousedown="event.preventDefault()" onclick="formatNotes('insertUnorderedList')" title="Bulleted list">&#8226; List</button>
+                </div>
+                <div class="notes-editable" id="e-notes" contenteditable="true" data-placeholder="Add any notes about this recipe..."></div>
             </div>
             <div class="m-acts">
                 <button class="btn-danger" id="btn-del" style="display:none" onclick="delRecipe()">Delete recipe</button>
@@ -1649,6 +1802,23 @@
             </div>
             <div class="m-acts">
                 <button class="btn-save" onclick="closeOv('ov-cat');renderAll()">Done</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Kids modal -->
+    <div class="overlay hide" id="ov-kids">
+        <div class="modal">
+            <button class="m-close" onclick="closeOv('ov-kids')">&#10005;</button>
+            <div class="modal-title">Manage Kids</div>
+            <p style="font-size:13px;color:var(--ink-2);margin-bottom:14px">Give each kid a short label — an initial or a number — to use as their favorite badge on recipe cards.</p>
+            <div id="kid-list" style="margin-bottom:16px"></div>
+            <div style="display:flex;gap:8px">
+                <input class="fi" id="new-kid-inp" maxlength="3" placeholder="Label (e.g. J)" onkeydown="if(event.key==='Enter')addKid()">
+                <button class="btn-save" onclick="addKid()">Add</button>
+            </div>
+            <div class="m-acts">
+                <button class="btn-save" onclick="closeOv('ov-kids');renderAll()">Done</button>
             </div>
         </div>
     </div>
@@ -1885,6 +2055,17 @@
         aisleOv = {};
     let customCats = [],
         catOrder = [];
+    let KIDS = [{
+        id: 'k1',
+        label: '1'
+    }, {
+        id: 'k2',
+        label: '2'
+    }, {
+        id: 'k3',
+        label: '3'
+    }];
+    let kidFilterSet = new Set();
     let itemOverrides = {};
     let pastManuals = [];
     let startDay = 'Monday';
@@ -1974,6 +2155,8 @@
                 aisleOv = s.aisleOv || {};
                 customCats = s.customCats || [];
                 catOrder = s.catOrder || [];
+                if (s.kids)
+                    KIDS = s.kids;
                 itemOverrides = s.itemOverrides || {};
                 pastManuals = s.pastManuals || [];
                 startDay = s.startDay || 'Monday';
@@ -2027,7 +2210,8 @@
                     pastManuals,
                     startDay,
                     dayNotes,
-                    aisles: AISLES
+                    aisles: AISLES,
+                    kids: KIDS
                 });
             } catch (e) {
                 console.error('Save error:', e);
@@ -2067,6 +2251,7 @@
         renderShopping();
         renderCooking();
         renderCatFilter();
+        renderKidFilterBar();
         if (isMobile)
             renderMobileStrip();
     }
@@ -2222,7 +2407,8 @@
     function renderGrid() {
         const srch = (document.getElementById('srch').value || '').toLowerCase();
         const fcat = document.getElementById('fcat').value || '';
-        const filtered = R.filter(r => (!srch || r.name.toLowerCase().includes(srch)) && (!fcat || r.category === fcat));
+        const filtered = R.filter(r => (!srch || r.name.toLowerCase().includes(srch)) && (!fcat || r.category === fcat) &&
+        (!kidFilterSet.size || (r.favKids || []).some(id => kidFilterSet.has(id))));
         const grouped = {};
         filtered.forEach(r => {
             if (!grouped[r.category])
@@ -2237,27 +2423,113 @@
         const orderedCats = allCats().filter(c => grouped[c]);
         const rest = Object.keys(grouped).filter(c => !orderedCats.includes(c));
         const plannedIds = new Set(Object.values(plan).flat());
+        const namePad = 18 + (KIDS.length + 1) * 21;
         el.innerHTML = [...orderedCats, ...rest].map(cat => `
                                     <div class="cat-section">
                                         <div class="cat-title" onclick="toggleCat(this)">
                                             <span>${cat}</span><span class="cat-chev">&#9654;</span>
                                         </div>
                                         <div class="recipe-cards">
-                                            ${grouped[cat].map(r => `
-                                                <div class="rcard${plannedIds.has(r.id) ? ' planned' : ''}" draggable="true"
-                                                    ondragstart="dragId='${r.id}'" ondragend="dragId=null"
-                                                    ontouchstart="touchDragStart(event,'${r.id}')"
-                                                    ontouchmove="touchDragMove(event)"
-                                                    ontouchend="touchDragEnd(event)"
-                                                    onclick="if(isMobile){mobileAddRecipe('${r.id}')}else{openView('${r.id}')}">
-                                                    <div class="rcard-acts">
-                                                        <button class="icon-btn" onclick="event.stopPropagation();openView('${r.id}')" title="View">&#9432;</button>
-                                                    </div>
-                                                    <div class="rcard-name">${r.name}</div>
-                                                    ${isMobile && mobileSelectedDay ? `<div class="rcard-add-hint">Tap to add to ${mobileSelectedDay}</div>` : ''}
-                                                </div>`).join('')}
+                                            ${grouped[cat].map(r => {const favSet = new Set(r.favKids || []);const kidBtns = KIDS.map(k => `<button class="kid-badge${favSet.has(k.id) ? ' active' : ''}" onclick="event.stopPropagation();toggleKidFav('${r.id}','${k.id}')" title="${k.label}'s favorite">${k.label}</button>`).join('');return `
+                                                    <div class="rcard${plannedIds.has(r.id) ? ' planned' : ''}" draggable="true"
+                                                        ondragstart="dragId='${r.id}'" ondragend="dragId=null"
+                                                        ontouchstart="touchDragStart(event,'${r.id}')"
+                                                        ontouchmove="touchDragMove(event)"
+                                                        ontouchend="touchDragEnd(event)"
+                                                        onclick="if(isMobile){mobileAddRecipe('${r.id}')}else{openView('${r.id}')}">
+                                                        <div class="rcard-acts">
+                                                            ${kidBtns}
+                                                            <button class="icon-btn" onclick="event.stopPropagation();openView('${r.id}')" title="View">&#9432;</button>
+                                                        </div>
+                                                        <div class="rcard-name" style="padding-right:${namePad}px">${r.name}</div>
+                                                        ${isMobile && mobileSelectedDay ? `<div class="rcard-add-hint">Tap to add to ${mobileSelectedDay}</div>` : ''}
+                                                    </div>`;}).join('')}
                                         </div>
                                     </div>`).join('');
+    }
+
+    // ── KID FAVORITES ───────────────────────────────────────────────
+    function renderKidFilterBar() {
+        const el = document.getElementById('kid-filter-group');
+        if (!el)
+            return;
+        el.innerHTML = KIDS.map(k => `<button class="kid-badge kid-filter-badge${kidFilterSet.has(k.id) ? ' active' : ''}" onclick="toggleKidFilter('${k.id}')" title="Show ${k.label}'s favorites">${k.label}</button>`).join('') +
+        `<button class="kid-manage-btn" onclick="openKidsModal()" title="Manage kids">&#9998;</button>`;
+    }
+
+    function toggleKidFilter(kidId) {
+        if (kidFilterSet.has(kidId))
+            kidFilterSet.delete(kidId);
+        else
+            kidFilterSet.add(kidId);
+        renderKidFilterBar();
+        renderGrid();
+    }
+
+    async function toggleKidFav(recipeId, kidId) {
+        const r = R.find(x => x.id === recipeId);
+        if (!r)
+            return;
+        const set = new Set(r.favKids || []);
+        if (set.has(kidId))
+            set.delete(kidId);
+        else
+            set.add(kidId);
+        r.favKids = [...set];
+        await saveRecipeToDb(r);
+        renderGrid();
+    }
+
+    function openKidsModal() {
+        renderKidsList();
+        document.getElementById('new-kid-inp').value = '';
+        openOv('ov-kids');
+    }
+
+    function renderKidsList() {
+        const container = document.getElementById('kid-list');
+        container.innerHTML = KIDS.map(k => `
+                                    <div style="display:flex;align-items:center;padding:8px 6px;border-bottom:1px solid var(--border);gap:10px">
+                                        <span class="kid-badge active">${k.label}</span>
+                                        <input class="fi" style="flex:1" maxlength="3" value="${k.label}" onchange="renameKid('${k.id}',this.value)">
+                                        <button onclick="deleteKid('${k.id}')" style="font-size:12px;color:var(--terra);background:none;border:none;cursor:pointer;font-family:inherit;padding:2px 6px">Remove</button>
+                                    </div>`).join('');
+    }
+
+    function addKid() {
+        const inp = document.getElementById('new-kid-inp');
+        const v = inp.value.trim();
+        if (!v)
+            return;
+        KIDS.push({
+            id: uid(),
+            label: v
+        });
+        inp.value = '';
+        saveSettings();
+        renderKidsList();
+        renderKidFilterBar();
+        renderGrid();
+    }
+
+    function renameKid(id, value) {
+        const v = value.trim();
+        const k = KIDS.find(x => x.id === id);
+        if (k && v)
+            k.label = v;
+        saveSettings();
+        renderKidsList();
+        renderKidFilterBar();
+        renderGrid();
+    }
+
+    function deleteKid(id) {
+        KIDS = KIDS.filter(k => k.id !== id);
+        kidFilterSet.delete(id);
+        saveSettings();
+        renderKidsList();
+        renderKidFilterBar();
+        renderGrid();
     }
 
     // ── DRAG & DROP ───────────────────────────────────────────────
@@ -3254,6 +3526,64 @@
         document.getElementById(id).classList.add('hide');
     }
 
+    // ── RECIPE NOTES (rich text: bold + bulleted lists only) ──────
+    function formatNotes(cmd) {
+        document.execCommand(cmd, false, null);
+        document.getElementById('e-notes').focus();
+    }
+    // Strips a contenteditable's HTML down to just <b>, <ul>/<li>, and <br>.
+    // Any other formatting (from typing or pasting) is unwrapped to plain
+    // text; div/p line breaks are converted to <br>.
+    function sanitizeNotesHtml(html) {
+        const tmp = document.createElement('div');
+        tmp.innerHTML = html;
+        const out = document.createElement('div');
+        const TAG_MAP = {
+            B: 'b',
+            STRONG: 'b',
+            UL: 'ul',
+            OL: 'ul',
+            LI: 'li'
+        };
+        const BLOCK_TAGS = new Set(['DIV', 'P']);
+        function walk(srcNode, destParent) {
+            srcNode.childNodes.forEach(node => {
+                if (node.nodeType === Node.TEXT_NODE) {
+                    destParent.appendChild(document.createTextNode(node.textContent));
+                    return;
+                }
+                if (node.nodeType !== Node.ELEMENT_NODE)
+                    return;
+                const tag = node.tagName;
+                if (tag === 'SCRIPT' || tag === 'STYLE')
+                    return;
+                if (tag === 'BR') {
+                    destParent.appendChild(document.createElement('br'));
+                    return;
+                }
+                if (TAG_MAP[tag]) {
+                    const el = document.createElement(TAG_MAP[tag]);
+                    walk(node, el);
+                    destParent.appendChild(el);
+                    return;
+                }
+                if (BLOCK_TAGS.has(tag)) {
+                    walk(node, destParent);
+                    destParent.appendChild(document.createElement('br'));
+                    return;
+                }
+                // Unknown tag (span, font, i, table, img, etc.) — unwrap it,
+                // keeping only its text/allowed inner content.
+                walk(node, destParent);
+            });
+        }
+        walk(tmp, out);
+        return out.innerHTML
+        .replace(/(<br>\s*){3,}/g, '<br><br>')
+        .replace(/(<br>\s*)+$/, '')
+        .trim();
+    }
+
     function openView(id) {
         const r = R.find(x => x.id === id);
         if (!r)
@@ -3270,6 +3600,13 @@
         document.getElementById('v-ings').innerHTML = r.ingredients.map(i => `<li>${i}</li>`).join('');
         document.getElementById('v-steps').innerHTML = r.instructions.map((s, i) =>
         `<li class="step-item"><span class="step-n">${i + 1}</span><span class="step-txt">${s}</span></li>`).join('');
+        const notesWrap = document.getElementById('v-notes-wrap');
+        if (r.notes) {
+            notesWrap.style.display = '';
+            document.getElementById('v-notes').innerHTML = r.notes;
+        } else {
+            notesWrap.style.display = 'none';
+        }
         openOv('ov-view');
     }
 
@@ -3286,6 +3623,7 @@
             document.getElementById('e-url').value = r.url || '';
             document.getElementById('e-ings').value = r.ingredients.join('\n');
             document.getElementById('e-steps').value = r.instructions.join('\n');
+            document.getElementById('e-notes').innerHTML = r.notes || '';
             delBtn.style.display = '';
         } else {
             document.getElementById('edit-title').textContent = 'Add Recipe';
@@ -3294,6 +3632,7 @@
             document.getElementById('e-url').value = '';
             document.getElementById('e-ings').value = '';
             document.getElementById('e-steps').value = '';
+            document.getElementById('e-notes').innerHTML = '';
             delBtn.style.display = 'none';
         }
         openOv('ov-edit');
@@ -3305,13 +3644,16 @@
             alert('Please enter a recipe name.');
             return;
         }
+        const existing = editId ? R.find(r => r.id === editId) : null;
         const rec = {
             id: editId || uid(),
             name,
             category: document.getElementById('e-cat').value,
             url: document.getElementById('e-url').value.trim(),
             ingredients: document.getElementById('e-ings').value.split('\n').map(s => s.trim()).filter(Boolean),
-            instructions: document.getElementById('e-steps').value.split('\n').map(s => s.trim()).filter(Boolean)
+            instructions: document.getElementById('e-steps').value.split('\n').map(s => s.trim()).filter(Boolean),
+            notes: sanitizeNotesHtml(document.getElementById('e-notes').innerHTML),
+            favKids: existing ? (existing.favKids || []) : []
         };
         await saveRecipeToDb(rec);
         if (editId) {
