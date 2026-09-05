@@ -2140,6 +2140,7 @@
     let SAVED = [];
     let promotingSavedId = null;
     const SAVED_CATS = ['Breakfast', 'Lunch', 'Dinner', 'Dessert', 'Other'];
+    const savedTitleAttempted = new Set(); // avoids re-fetching a title more than once per session
     let itemOverrides = {};
     let pastManuals = [];
     let startDay = 'Monday';
@@ -3662,20 +3663,59 @@
                                             </div>`;
         }).join('');
         el.innerHTML = addRowHTML + sectionsHTML;
+        // Fetch a real page title for any item that doesn't have one yet
+        // (new items, or older ones added before this existed).
+        SAVED.forEach(s => {
+            if (!s.title)
+                fetchSavedTitle(s);
+        });
+    }
+
+    function escHtml(s) {
+        return String(s).replace(/[&<>"']/g, c => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#39;'
+        }[c]));
     }
 
     function renderSavedItem(item) {
-        let display = item.url;
+        let fallback = item.url;
         try {
-            display = new URL(item.url).hostname.replace(/^www\./, '');
+            fallback = new URL(item.url).hostname.replace(/^www\./, '');
         } catch (e) {}
+        const label = escHtml(item.title || fallback);
+        const safeUrl = escHtml(item.url);
         return `<div class="saved-item">
-                                        <a class="saved-link" href="${item.url}" target="_blank" rel="noopener" title="${item.url}">${display}</a>
+                                        <a class="saved-link" href="${safeUrl}" target="_blank" rel="noopener" title="${safeUrl}">${label}</a>
                                         <div class="saved-actions">
                                             <button class="btn-sm" onclick="promoteSaved('${item.id}')">+ Recipe</button>
                                             <button class="saved-del" onclick="deleteSaved('${item.id}')" title="Remove">&#10005;</button>
                                         </div>
                                     </div>`;
+    }
+
+    // Looks up a link's real page title via Microlink's free metadata API
+    // (no key, ~50 lookups/day) and upgrades the display once it resolves.
+    // Falls back silently to the domain name shown by renderSavedItem if the
+    // lookup fails for any reason (offline, rate-limited, site blocks it).
+    async function fetchSavedTitle(item) {
+        if (savedTitleAttempted.has(item.id))
+            return;
+        savedTitleAttempted.add(item.id);
+        try {
+            const res = await fetch('https://api.microlink.io/?url=' + encodeURIComponent(item.url));
+            const json = await res.json();
+            if (json.status === 'success' && json.data && json.data.title) {
+                item.title = json.data.title;
+                await saveSavedToDb(item);
+                renderSaved();
+            }
+        } catch (e) {
+
+        }
     }
 
     async function addSaved() {
@@ -3714,6 +3754,8 @@
         openEdit(null);
         promotingSavedId = id;
         document.getElementById('e-url').value = item.url;
+        if (item.title)
+            document.getElementById('e-name').value = item.title;
     }
 
     // ── MODALS ────────────────────────────────────────────────────
